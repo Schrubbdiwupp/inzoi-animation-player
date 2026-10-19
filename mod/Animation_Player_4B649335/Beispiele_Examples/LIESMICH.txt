@@ -1,0 +1,263 @@
+﻿==============================================================================
+  ANIMATION PLAYER für inZOI  -  LIESMICH (Deutsch)
+  English version: README.txt
+==============================================================================
+
+Mit dem Animation Player spielst du beliebige Animationen und Posen auf
+deinem Zoi (oder einem anderen Zoi in der Nähe) ab, frierst sie für Fotos
+ein und verbiegst einzelne Knochen mit dem Pose-Editor. Im Reiter
+"KI-Bewegungen" spielst du außerdem deine im Spiel erzeugten KI-Emotes ab,
+auch in Endlosschleife.
+
+Quelltext und Einlese-Skript: https://github.com/Schrubbdiwupp/inzoi-animation-player
+
+Öffnen/Schließen: Taste F9  (oder Spiel-Befehl  animation_player.toggle)
+Sprache: Knopf "DE"/"EN" oben rechts in der Titelleiste. Beim ersten Start
+wird automatisch die Sprache des Spiels übernommen.
+
+
+------------------------------------------------------------------------------
+ 0. INSTALLATION
+------------------------------------------------------------------------------
+  1. Den Ordner "Animation_Player_4B649335" aus der ZIP kopieren nach:
+       Documents\inZOI\Mods\
+  2. Spiel starten, im Mod-Manager "Animation_Player" aktivieren.
+  3. Im Spiel F9 drücken.
+
+  Update von einer älteren Version: alten Ordner vorher löschen. Deine
+  Einstellungen (Favoriten, Posen) liegen in Mods\InGame\... und bleiben
+  erhalten.
+
+
+------------------------------------------------------------------------------
+ 1. ZIEL-ZOI
+------------------------------------------------------------------------------
+  Mein Zoi            der Zoi, den du gerade steuerst (Standard)
+  Zoi vor der Kamera  Kamera auf einen Zoi richten, dann klicken
+  In der Nähe         alle Zois im Umkreis, Name antippen = Ziel
+  Mein Haushalt       alle Mitglieder deines Haushalts
+
+Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
+
+
+------------------------------------------------------------------------------
+ 2. REITER "ANIMATIONEN"
+------------------------------------------------------------------------------
+  Alle        lädt ALLE Animationen des Spiels (dauert kurz), das Suchfeld
+              filtert die Liste dann sofort
+  Posen       Foto-Posen des Spiels (Katzenherz, Selfie, Muskeln, an der
+              Wand lehnen, auf dem Boden sitzen, ...) + deine pose_anims.cfg
+  Mod-Anims   Animationen aus anderen Mods (siehe Abschnitt 6)
+  * Eigene    deine Favoriten
+  Tanzen, Winken, ...   schnelle Suchkategorien
+
+  Klick auf einen Eintrag = auswählen, zweiter Klick = abspielen.
+  "Nur passende für diesen Zoi" blendet Animationen aus, die für Alter,
+  Geschlecht oder Haltung des Zois nicht passen.
+
+  Abspielen / Zufall / Stopp   selbsterklärend
+  Loop        wiederholt die Animation endlos
+  Debug       Abspielen hebt die Spielpause auf, Stopp pausiert das Spiel
+              (praktisch für Mocap- und Video-Aufnahmen)
+  Einfrieren  hält die Spielzeit an, die aktuelle Pose bleibt stehen.
+              "Auftauen" (oder Play im Spiel) läuft weiter.
+  Am Ende: Spiel anhalten   (Standard: aus)
+              hält kurz vor dem Ende der Animation das GANZE SPIEL an,
+              damit die letzte Pose stehen bleibt. Ideal für Fotos.
+              "Auftauen" (oder Play im Spiel) läuft weiter.
+  Tempo       0,25x bis 3x
+  * Auswahl zu Eigene   speichert die gewählte Animation als Favorit
+
+
+------------------------------------------------------------------------------
+ 2b. REITER "KI-BEWEGUNGEN"
+------------------------------------------------------------------------------
+  Spielt die KI-Bewegungen ab, die du im Spiel erzeugt hast (Zoi anklicken >
+  "KI-Emote"). Das Spiel lädt höchstens 30 davon aus
+    Documents\inZOI\AIGenerated\MyAIMotions
+  in 30 feste Plätze (Slots), sortiert nach dem Ordnernamen.
+
+  - Doppelklick auf einen Eintrag oder "Abspielen": der Ziel-Zoi spielt ihn ab.
+  - "Loop": startet die Bewegung nach dem Ende automatisch neu.
+  - "Stopp": bricht die Bewegung ab.
+  - "Umbenennen": eigener Name für den gewählten Slot (leer = Name zurück).
+
+  Titel und Längen anzeigen:
+    "KI-Bewegungen_einlesen.bat" per Doppelklick starten. Sie liegt in diesem
+    Ordner oder, falls sie fehlt (z. B. beim Download von Nexus), auf GitHub:
+      https://github.com/Schrubbdiwupp/inzoi-animation-player
+    Es liest die Titel und Längen aus MyAIMotions und speichert sie in
+    saved\ai_motions.cfg. Danach im Spiel auf "Neu laden" klicken.
+    Nach dem Hinzufügen oder Löschen von KI-Bewegungen erneut ausführen.
+    Ohne die Datei zeigt der Reiter einfach "Slot 1" bis "Slot 30".
+
+  Wichtig: KI-Bewegungen laufen immer in normalem Tempo. Tempo-Regler,
+  "Einfrieren" und die Spielpause wirken auf sie nicht.
+------------------------------------------------------------------------------
+ 3. REITER "POSE-EDITOR"
+------------------------------------------------------------------------------
+  Damit verdrehst du einzelne Knochen (Kopf, Arme, Wirbelsäule, Finger, ...).
+
+  1. Knochen in der Liste anklicken (Gruppen: Körper, Kopf, Rumpf, Arme,
+     Finger, Beine, Geändert, Alle - oder oben suchen).
+  2. Mit den Reglern Pitch / Yaw / Roll drehen (-180° bis +180°).
+     "-" / "+" = 5°-Schritte, "0" = Achse zurück auf null.
+     Die Achsen gelten lokal am Knochen - einfach ausprobieren.
+  3. Modus:
+       Additiv   die Drehung kommt ZUSÄTZLICH auf die laufende Animation
+                 (empfohlen, der Zoi bewegt sich weiter)
+       Ersetzen  die Drehung ERSETZT die Animation für diesen Knochen
+  4. Name eingeben und "Speichern" - die Pose erscheint unten in der Liste.
+     Klick auf eine gespeicherte Pose lädt sie wieder, "x" löscht sie.
+
+  Profi-Tipp für Fotos:
+     Pose abspielen -> "Einfrieren" -> im Pose-Editor nachjustieren
+     (z.B. Kopf zur Kamera drehen) -> Foto machen -> "Alles zurücksetzen".
+
+  Hinweis: Die Knochen-Befehle sind im Spiel als "experimentell" markiert.
+  Wenn ein Zoi komisch aussieht: "Alles zurücksetzen".
+
+
+------------------------------------------------------------------------------
+ 4. WO WERDEN DIE EINSTELLUNGEN GESPEICHERT?
+------------------------------------------------------------------------------
+  Documents\inZOI\Mods\InGame\Animation_Player_4B649335\ui\animation_player\saved\
+
+  custom.cfg       deine "* Eigene"-Liste
+  mod_anims.cfg    Liste für den Knopf "Mod-Anims"     (legst DU an)
+  pose_anims.cfg   zusätzliche Posen für "Posen"        (legst DU an)
+  poses.cfg        gespeicherte Posen des Pose-Editors
+  lang.cfg         gewählte Sprache ("de" oder "en")
+  ai_motions.cfg   Titel/Längen der KI-Bewegungen (von KI-Bewegungen_einlesen.bat)
+  ai_names.cfg     eigene Namen der KI-Bewegungs-Slots
+  window.cfg       Fensterposition und -größe
+
+  Alle .cfg-Dateien sind einfacher Text (JSON) und lassen sich mit dem
+  Editor (Notepad) bearbeiten. Das Spiel vorher schließen oder danach den
+  Player einmal mit F9 zu- und aufmachen.
+  Wenn der Ordner "saved" noch nicht existiert: Player einmal öffnen und
+  das Fenster verschieben - dann legt das Spiel ihn an.
+
+
+------------------------------------------------------------------------------
+ 5. BEISPIELDATEIEN (Ordner "Beispiele_Examples\saved")
+------------------------------------------------------------------------------
+  custom.cfg       6 schöne Spiel-Animationen als Start-Favoriten
+  pose_anims.cfg   3 zusätzliche Posen (Selbstbewusst, Begeistert, Anfeuern)
+  poses.cfg        2 fertige Knochen-Posen ("Neugierig", "Stolz")
+  mod_anims.cfg    Vorlage für Mod-Animationen (siehe Abschnitt 6)
+
+  Benutzen: die gewünschte Datei in den saved-Ordner aus Abschnitt 4
+  kopieren. ACHTUNG: eine vorhandene custom.cfg / poses.cfg wird dabei
+  überschrieben - vorher sichern, wenn du schon eigene Einträge hast!
+
+
+------------------------------------------------------------------------------
+ 6. MOD-ANIMATIONEN HINZUFÜGEN  (Schritt für Schritt)
+------------------------------------------------------------------------------
+  Der Player spielt "CharacterAnim"-IDs ab. Jede Animation, die eine Mod
+  ins Spiel bringt, hat so eine ID (z.B. "MeinMod_Tanz_01").
+
+  SCHRITT 1 - Die ID herausfinden. Drei Wege:
+    a) Im Player auf "Alle" klicken und den Mod-Namen oder einen Teil
+       davon ins Suchfeld tippen. Taucht die Animation auf: das ist die ID.
+    b) In der Beschreibung der Mod nachsehen (viele Modder nennen die IDs).
+    c) Im Mod-Ordner (Documents\inZOI\Mods\...\<Mod>\non_ufs\JsonPatch\)
+       eine Datei "AnimCharacter_..._patch.json" mit dem Editor öffnen und
+       nach  "Id":  suchen. Der Text dahinter ist die ID.
+
+  SCHRITT 2 - Die Datei mod_anims.cfg anlegen
+    Beispiel-Datei "Beispiele_Examples\saved\mod_anims.cfg" kopieren nach:
+      Documents\inZOI\Mods\InGame\Animation_Player_4B649335\ui\animation_player\saved\
+
+  SCHRITT 3 - Die IDs eintragen
+    Datei mit dem Editor öffnen. Inhalt ist eine Liste in eckigen Klammern,
+    jede ID in Anführungszeichen, getrennt durch Kommas:
+
+      ["MeinMod_Tanz_01","MeinMod_Tanz_02","Lover_DeepKiss_MF"]
+
+    Die Beispiel-IDs "Meine_Mod_Animation_01/02" durch deine echten IDs
+    ersetzen. ("Lover_DeepKiss_MF" ist eine Spiel-Animation und
+    funktioniert immer - gut zum Testen.)
+
+  SCHRITT 4 - Testen
+    Spiel starten (bzw. Player mit F9 schließen und öffnen). Der Knopf
+    "Mod-Anims" ist jetzt nicht mehr ausgegraut. Ein Klick auf einen
+    Eintrag prüft, ob das Spiel die Animation kennt ("OK ..." oder Fehler).
+
+  WICHTIG:
+    - Die jeweilige Mod muss installiert und aktiv sein.
+    - Animationen aus mod_anims.cfg werden nur auf Zois ab "junger
+      Erwachsener" abgespielt (Schutz für Kinder/Teenager).
+    - Eigene Posen statt Mod-Animationen? Gleiches Prinzip mit
+      pose_anims.cfg - die Einträge erscheinen dann unter "Posen".
+
+
+------------------------------------------------------------------------------
+ 7. FÜR MODDER: EIGENE ANIMATIONEN ABSPIELBAR MACHEN
+------------------------------------------------------------------------------
+  Bringt eine Mod nur Montagen (AnimMontage-Dateien) mit, aber KEINE
+  CharacterAnim-Zeile, kann der Player sie nicht finden. Dann braucht es
+  zwei JsonPatch-Einträge im ModKit (Beispiele im Ordner
+  "Beispiele_Examples\modder"):
+
+    AnimCharacter_Interaction_patch.json
+        - eine Zeile pro abspielbarer Animation ("Id" = die ID für den Player)
+        - pro Geschlecht und Altersstufe ein Eintrag in AnimInfoList
+          (Youth = junge Erwachsene unbedingt mit eintragen, sonst meldet
+          das Spiel "wrong age")
+        - "Animation" zeigt auf die Montage-Datei deiner Mod
+
+    Montage_patch.json
+        - JEDE eigene Montage braucht hier einen Eintrag (Id = Name der
+          Montage). Fehlt er, bricht das Spiel die Animation still ab!
+        - AnimReferenceName = Name der Animations-Sequenz
+        - "Notifies" leer lassen
+
+  Die Platzhalter "MyMod_12345678" (Plugin-Ordner) und
+  "MyMod_Dance_01..." durch deine Namen ersetzen. Danach im ModKit packen.
+
+
+------------------------------------------------------------------------------
+ 8. HÄUFIGE PROBLEME
+------------------------------------------------------------------------------
+  "Mod-Anims" ist ausgegraut
+      -> mod_anims.cfg fehlt, ist leer oder liegt im falschen Ordner.
+         Tippfehler? Jede ID braucht Anführungszeichen, Kommas dazwischen,
+         eckige Klammern außen.
+
+  "Diese Animation ist nur für Erwachsene"
+      -> Mod-Animationen laufen nur ab junger Erwachsener.
+
+  "Keine Treffer" / Animation startet nicht
+      -> Haken "Nur passende für diesen Zoi" entfernen und erneut
+         versuchen. Manche Animationen brauchen eine bestimmte Haltung
+         (sitzen, liegen) oder ein Objekt.
+
+  Spiel steht nach "Einfrieren" / "Am Ende: Spiel anhalten"
+      -> Das ist Absicht: "Auftauen" klicken oder im Spiel auf Play.
+
+  KI-Bewegungen: nur "Slot 1" bis "Slot 30" oder falsche Titel
+      -> KI-Bewegungen_einlesen.bat (erneut) ausführen, dann im Reiter
+         "KI-Bewegungen" auf "Neu laden" klicken. Nach jedem Hinzufügen oder
+         Löschen von KI-Bewegungen wiederholen.
+
+  KI-Bewegung reagiert nicht auf Tempo, Einfrieren oder Spielpause
+      -> Das liegt am Spiel: KI-Bewegungen laufen immer in Echtzeit.
+
+  Mehr als 30 KI-Bewegungen
+      -> Das Spiel lädt höchstens 30. Überzählige vorher aus dem Ordner
+         MyAIMotions herausnehmen.
+
+  Zoi sieht nach dem Pose-Editor verdreht aus
+      -> Reiter "Pose-Editor" -> "Alles zurücksetzen".
+
+  Tempo ändern startet die Animation von vorn
+      -> Das Spiel kann eine laufende Animation derzeit nicht an einer
+         bestimmten Stelle fortsetzen. Tempo am besten vor dem Abspielen
+         einstellen.
+
+
+------------------------------------------------------------------------------
+  Viel Spaß!  -  Schrubbi
+==============================================================================

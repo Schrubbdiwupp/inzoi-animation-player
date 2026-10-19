@@ -1,0 +1,77 @@
+{
+	"Struct": "Montage",
+	"PatchList": [
+		{
+			"Method": "Append",
+			"Query": "Montage",
+			"Value": {
+				"Id": "MyMod_Dance_01_F_Montage",
+				"TotalPlayLength": 10,
+				"LoopPlayLength": 0,
+				"RateScale": 1,
+				"bHasRootAnim": false,
+				"bEnableAutoBlendOut": true,
+				"BlendInTime": 0.25,
+				"BlendOutTime": 0.25,
+				"GroupName": "DefaultGroup",
+				"Sections": [
+					{
+						"Name": "Default",
+						"NextSectionName": "None",
+						"Time": 0,
+						"IsLoop": false
+					}
+				],
+				"AnimTracks": [
+					{
+						"SlotName": "DefaultSlot",
+						"AnimSegments": [
+							{
+								"AnimReferenceName": "MyMod_Dance_01_F",
+								"bEnableRootMotion": false,
+								"bForceRootLock": false
+							}
+						]
+					}
+				],
+				"Notifies": []
+			}
+		},
+		{
+			"Method": "Append",
+			"Query": "Montage",
+			"Value": {
+				"Id": "MyMod_Dance_01_M_Montage",
+				"TotalPlayLength": 10,
+				"LoopPlayLength": 0,
+				"RateScale": 1,
+				"bHasRootAnim": false,
+				"bEnableAutoBlendOut": true,
+				"BlendInTime": 0.25,
+				"BlendOutTime": 0.25,
+				"GroupName": "DefaultGroup",
+				"Sections": [
+					{
+						"Name": "Default",
+						"NextSectionName": "None",
+						"Time": 0,
+						"IsLoop": false
+					}
+				],
+				"AnimTracks": [
+					{
+						"SlotName": "DefaultSlot",
+						"AnimSegments": [
+							{
+								"AnimReferenceName": "MyMod_Dance_01_M",
+								"bEnableRootMotion": false,
+								"bForceRootLock": false
+							}
+						]
+					}
+				],
+				"Notifies": []
+			}
+		}
+	]
+}

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Animation Player</title>
+<link rel="stylesheet" href="coui://inzoi/mod/inzoi-fonts.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+/* html/body MUST keep 'background: transparent' and 'overflow: hidden'.
+   NEVER set 'pointer-events: none' on html/body. */
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden;
+             font-family: var(--inzoi-font-ui); font-size: 15px; color: #fff; }
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+#app-root { position: absolute; top: 120px; left: 80px; width: 440px; height: 760px;
+            display: flex; flex-direction: column; overflow: hidden;
+            background: rgba(18,20,28,0.88); border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px; }
+#title-bar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+             padding: 6px 10px; background: rgba(0,0,0,0.55); cursor: move;
+             user-select: none; -webkit-user-select: none; }
+#title-text { font-size: 16px; font-weight: bold; }
+#title-buttons { display: flex; align-items: center; gap: 6px; }
+#minimize-btn, #close-btn {
+    cursor: pointer; font-size: 14px; font-weight: bold; line-height: 1.4;
+    font-family: var(--inzoi-font-mono, Consolas, monospace);
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; border-radius: 3px; padding: 1px 7px;
+    user-select: none; -webkit-user-select: none; }
+#close-btn:hover { background: rgba(200,60,60,0.5); }
+#minimize-btn { display: none; }
+#content { flex: 1; min-height: 0; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+           overflow: hidden; }
+#resize-handle { position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; cursor: nwse-resize; opacity: 0.7;
+ background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 41%, rgba(255,255,255,0.5) 55%, transparent 56%, transparent 68%, rgba(255,255,255,0.4) 69%, rgba(255,255,255,0.4) 80%, transparent 81%); }
+
+/* --- Animation Player --- */
+.cats { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; }
+.btn { font-family: var(--inzoi-font-ui); cursor: pointer; padding: 4px 9px; border-radius: 4px;
+       border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.10); color: #fff; }
+.btn:hover { background: rgba(255,255,255,0.22); }
+.btn.active { background: rgba(90,150,255,0.55); border-color: rgba(140,180,255,0.9); }
+.btn.play { background: rgba(60,170,90,0.55); }
+.btn.play:hover { background: rgba(60,170,90,0.8); }
+.btn.stop { background: rgba(200,70,70,0.55); }
+.btn.stop:hover { background: rgba(200,70,70,0.8); }
+.row { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+/* Eingabefelder: Farben explizit setzen (cohtml erbt 'color' bei Inputs nicht zuverlässig) */
+#search, #custom-id { flex: 1; min-width: 0; padding: 5px 8px; border-radius: 4px;
+          color: #ffffff; caret-color: #ffffff;
+          background-color: rgba(255,255,255,0.16); }
+#search { border: 1px solid rgba(255,255,255,0.45); }
+#search:focus, #custom-id:focus { background-color: rgba(255,255,255,0.24); }
+#search::placeholder, #custom-id::placeholder { color: rgba(255,255,255,0.6); }
+.btn.all { border-color: rgba(120,220,160,0.8); }
+.btn.all.active { background: rgba(60,170,110,0.6); }
+.opts { font-size: 13px; opacity: 0.9; }
+.opts label { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+#list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+        background: rgba(0,0,0,0.30); border-radius: 4px; padding: 3px; }
+.item { padding: 5px 8px; border-radius: 3px; cursor: pointer; font-size: 13px;
+        font-family: var(--inzoi-font-mono, Consolas, monospace);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item:hover { background: rgba(255,255,255,0.12); }
+.item.selected { background: rgba(90,150,255,0.45); }
+.empty { padding: 10px; opacity: 0.6; font-size: 13px; text-align: center; }
+.btn.custom { border-color: rgba(255,200,80,0.8); }
+.btn.custom.active { background: rgba(230,170,40,0.6); }
+.btn.loop.on { background: rgba(230,170,40,0.7); border-color: rgba(255,210,110,1); }
+.btn.debug.on { background: rgba(60,170,120,0.7); border-color: rgba(120,230,170,1); }
+.item .dur { flex-shrink: 0; margin-left: auto; opacity: 0.55; font-size: 12px; }
+.prog-row { align-items: center; }
+#prog-track { position: relative; flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.18); }
+#prog-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 4px; background: rgba(120,200,140,0.85); }
+#prog-text { width: 96px; text-align: right; font-size: 12px; font-family: var(--inzoi-font-mono, Consolas, monospace); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+#custom-add { display: none; }
+#custom-id { border: 1px solid rgba(255,200,80,0.7); }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .del { flex-shrink: 0; padding: 0 6px; border-radius: 3px; opacity: 0.6;
+             font-family: var(--inzoi-font-mono, Consolas, monospace); }
+.item .del:hover { opacity: 1; background: rgba(200,60,60,0.6); }
+#status { flex-shrink: 0; font-size: 12px; opacity: 0.85; min-height: 16px; max-height: 48px;
+          overflow: hidden; word-break: break-all; }
+#status.err { color: #ff8a8a; }
+.speed-row .label { font-size: 13px; font-weight: bold; }
+#speed-track { position: relative; flex: 1; min-width: 60px; height: 8px; margin: 0 8px; cursor: pointer;
+               border-radius: 4px; background: rgba(255,255,255,0.18); }
+#speed-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px;
+              background: rgba(90,150,255,0.8); }
+#speed-knob { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+              border-radius: 50%; background: #fff; box-shadow: 0 0 3px rgba(0,0,0,0.6); }
+#speed-value { width: 44px; text-align: right; font-size: 13px;
+               font-family: var(--inzoi-font-mono, Consolas, monospace); }
+.target-box { flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px;
+              border-radius: 4px; background: rgba(255,255,255,0.06); }
+.target-box .label { font-size: 13px; font-weight: bold; }
+.targets { display: flex; flex-wrap: wrap; gap: 4px; max-height: 62px; overflow-y: auto;
+           overscroll-behavior: contain; }
+.btn.chip { font-size: 13px; padding: 2px 8px; }
+.btn.chip.active { background: rgba(170,110,255,0.6); border-color: rgba(200,160,255,0.95); }
+
+/* --- Sprache / Reiter --- */
+#lang-btn { cursor: pointer; font-size: 12px; font-weight: bold; padding: 1px 7px; border-radius: 3px;
+            background: rgba(90,150,255,0.35); border: 1px solid rgba(140,180,255,0.7); }
+#lang-btn:hover { background: rgba(90,150,255,0.6); }
+.tabs { display: flex; gap: 4px; flex-shrink: 0; }
+.tabs .btn { flex: 1; }
+.tab { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.btn.poses { border-color: rgba(255,130,200,0.8); }
+.btn.poses.active { background: rgba(220,90,170,0.6); }
+.btn.freeze.on { background: rgba(80,180,230,0.7); border-color: rgba(150,220,255,1); }
+.btn.toggle { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.btn.toggle .box { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.7); }
+.btn.toggle.on .box { background: rgba(120,220,160,0.95); border-color: rgba(160,255,200,1); }
+/* 18.10.2026: cohtml fällt bei Formularfeldern auf eine Monospace-Schrift OHNE Umlaute zurück ("N?he", "K?ssen")
+   und zeichnet <button> mit display:flex als weißes Feld -> Spiel-UI-Schrift erzwingen, Schalter sind <div>. */
+button, .btn, input, textarea, select { font-family: var(--inzoi-font-ui) !important; }
+.btn.toggle { user-select: none; -webkit-user-select: none; }
+
+/* --- Pose-Editor --- */
+#bone-search, #pose-name { flex: 1; min-width: 0; padding: 5px 8px; border-radius: 4px;
+          color: #ffffff; caret-color: #ffffff; background-color: rgba(255,255,255,0.16);
+          border: 1px solid rgba(255,255,255,0.45); }
+#bone-search::placeholder, #pose-name::placeholder { color: rgba(255,255,255,0.6); }
+#bone-list { flex: 1; min-height: 60px; overflow-y: auto; overscroll-behavior: contain;
+             background: rgba(0,0,0,0.30); border-radius: 4px; padding: 3px; }
+#bone-list .item .tech { opacity: 0.5; font-size: 11px; margin-left: 6px; }
+#bone-list .item.changed .name { color: #ffd27a; }
+.pose-box { flex-shrink: 0; display: flex; flex-direction: column; gap: 5px; padding: 6px;
+            border-radius: 4px; background: rgba(255,255,255,0.06); }
+#bone-name { flex: 1; font-weight: bold; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axis-row .label { width: 46px; font-size: 13px; }
+.axis-track { position: relative; flex: 1; min-width: 60px; height: 8px; margin: 0 6px; cursor: pointer;
+              border-radius: 4px; background: rgba(255,255,255,0.18); }
+.axis-track .mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: rgba(255,255,255,0.5); }
+.axis-track .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: rgba(220,90,170,0.85); }
+.axis-track .knob { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+                    border-radius: 50%; background: #fff; box-shadow: 0 0 3px rgba(0,0,0,0.6); }
+.axis-row .val { width: 44px; text-align: right; font-size: 12px; font-family: var(--inzoi-font-mono, Consolas, monospace); }
+#pose-list { flex-shrink: 0; max-height: 110px; overflow-y: auto; overscroll-behavior: contain;
+             background: rgba(0,0,0,0.30); border-radius: 4px; padding: 3px; }
+#pose-list .item .ex { opacity: 0.55; font-size: 11px; margin-left: 6px; }
+.hint { font-size: 12px; opacity: 0.7; }
+
+/* --- KI-Bewegungen --- */
+#ai-count { flex: 1; }
+#ai-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+           background: rgba(0,0,0,0.30); border-radius: 4px; padding: 3px; }
+#ai-list .item { font-family: var(--inzoi-font-ui); justify-content: flex-start; }
+#ai-list .item .nr { flex-shrink: 0; width: 26px; opacity: 0.55; font-size: 12px; }
+#ai-list .item .name { flex: 1; min-width: 0; }
+#ai-prog-track { position: relative; flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.18); }
+#ai-prog-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 4px; background: rgba(120,200,140,0.85); }
+#ai-prog-text { width: 96px; text-align: right; font-size: 12px; font-family: var(--inzoi-font-mono, Consolas, monospace); }
+#ai-name { flex: 1; min-width: 0; padding: 5px 8px; border-radius: 4px;
+           color: #ffffff; caret-color: #ffffff; background-color: rgba(255,255,255,0.16);
+           border: 1px solid rgba(255,200,80,0.7); }
+#ai-name::placeholder { color: rgba(255,255,255,0.6); }
+</style>
+</head>
+<body>
+<div id="app-root">
+  <div id="title-bar">
+    <span id="title-text">Animation Player</span>
+    <div id="title-buttons">
+      <span id="lang-btn" data-i18n-title="lang_tip">DE</span>
+      <span id="minimize-btn">_</span>
+      <span id="close-btn">X</span>
+    </div>
+  </div>
+  <div id="content">
+    <div class="target-box">
+      <div class="row">
+        <span class="label" data-i18n="target">Ziel:</span>
+        <button class="btn chip" id="view-btn" data-i18n="view_btn" data-i18n-title="view_tip">Zoi vor der Kamera</button>
+        <button class="btn chip" id="scan-btn" data-i18n="scan_btn">In der Nähe</button>
+        <button class="btn chip" id="house-btn" data-i18n="house_btn">Mein Haushalt</button>
+      </div>
+      <div class="targets" id="targets"></div>
+    </div>
+    <div class="tabs">
+      <button class="btn active" id="tab-anim-btn" data-i18n="tab_anim">Animationen</button>
+      <button class="btn" id="tab-ai-btn" data-i18n="tab_ai">KI-Bewegungen</button>
+      <button class="btn" id="tab-pose-btn" data-i18n="tab_pose">Pose-Editor</button>
+    </div>
+
+    <div class="tab" id="tab-anim">
+      <div class="cats" id="cats"></div>
+      <div class="row">
+        <input id="search" type="text" data-i18n-ph="search_ph" placeholder="Suchbegriff (z.B. dance, wave, sit)">
+        <button class="btn" id="search-btn" data-i18n="search_btn">Suchen</button>
+      </div>
+      <div class="row opts">
+        <div role="button" class="btn toggle on" id="validate"><span class="box"></span><span data-i18n="validate">Nur passende für diesen Zoi</span></div>
+      </div>
+      <div class="row" id="custom-add">
+        <input id="custom-id" type="text" data-i18n-ph="custom_ph" placeholder="Eigene Animations-ID eingeben">
+        <button class="btn" id="custom-add-btn" data-i18n="custom_add">Hinzufügen</button>
+      </div>
+      <div id="list"><div class="empty" data-i18n="list_start">Kategorie wählen oder suchen.</div></div>
+      <div class="row">
+        <button class="btn play" id="play-btn" data-i18n="play">Abspielen</button>
+        <button class="btn loop" id="loop-btn">Loop: Aus</button>
+        <button class="btn" id="random-btn" data-i18n="random">Zufall</button>
+        <button class="btn stop" id="stop-btn" data-i18n="stop">Stopp</button>
+        <button class="btn debug" id="debug-btn" data-i18n-title="debug_tip">Debug: Aus</button>
+      </div>
+      <div class="row">
+        <button class="btn freeze" id="freeze-btn" data-i18n-title="freeze_tip">Einfrieren</button>
+        <div role="button" class="btn toggle" id="hold-chk" data-i18n-title="hold_tip"><span class="box"></span><span data-i18n="hold">Am Ende: Spiel anhalten</span></div>
+      </div>
+      <div class="row prog-row">
+        <div id="prog-track"><div id="prog-fill"></div></div>
+        <span id="prog-text">--</span>
+      </div>
+      <div class="row speed-row">
+        <span class="label" data-i18n="speed">Tempo</span>
+        <button class="btn chip" id="speed-minus">-</button>
+        <div id="speed-track"><div id="speed-fill"></div><div id="speed-knob"></div></div>
+        <button class="btn chip" id="speed-plus">+</button>
+        <span id="speed-value">1.00x</span>
+        <button class="btn chip" id="speed-reset">1x</button>
+      </div>
+      <div class="row">
+        <button class="btn custom" id="fav-btn" data-i18n="fav">* Auswahl zu Eigene</button>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-ai" style="display:none">
+      <div class="row">
+        <span id="ai-count" class="hint">--</span>
+        <button class="btn chip" id="ai-reload-btn" data-i18n="ai_reload" data-i18n-title="ai_reload_tip">Neu laden</button>
+      </div>
+      <div id="ai-list"></div>
+      <div class="row">
+        <button class="btn play" id="ai-play-btn" data-i18n="play">Abspielen</button>
+        <button class="btn loop" id="ai-loop-btn">Loop: Aus</button>
+        <button class="btn stop" id="ai-stop-btn" data-i18n="stop">Stopp</button>
+      </div>
+      <div class="row prog-row">
+        <div id="ai-prog-track"><div id="ai-prog-fill"></div></div>
+        <span id="ai-prog-text">--</span>
+      </div>
+      <div class="row">
+        <input id="ai-name" type="text" data-i18n-ph="ai_name_ph" placeholder="Eigener Name für den Slot">
+        <button class="btn custom" id="ai-rename-btn" data-i18n="ai_rename">Umbenennen</button>
+      </div>
+      <div class="hint" data-i18n="ai_hint">Nur die Bewegungen aus dem KI-Emote-Menü (max. 30). Tempo, Einfrieren und Spielpause wirken hier nicht.</div>
+    </div>
+
+    <div class="tab" id="tab-pose" style="display:none">
+      <div class="row">
+        <input id="bone-search" type="text" data-i18n-ph="bone_search_ph" placeholder="Knochen suchen (z.B. head, arm)">
+        <button class="btn" id="bone-load-btn" data-i18n="bone_load" data-i18n-title="bone_load_tip">Neu laden</button>
+      </div>
+      <div class="cats" id="bone-groups"></div>
+      <div id="bone-list"><div class="empty" data-i18n="bone_none_loaded">Knochen werden geladen ...</div></div>
+      <div class="pose-box">
+        <div class="row">
+          <span id="bone-name" data-i18n="bone_none">Kein Knochen gewählt</span>
+          <button class="btn chip" id="mode-add" data-i18n="mode_add" data-i18n-title="mode_add_tip">Additiv</button>
+          <button class="btn chip" id="mode-rep" data-i18n="mode_rep" data-i18n-title="mode_rep_tip">Ersetzen</button>
+        </div>
+        <div id="axes"></div>
+        <div class="row">
+          <button class="btn" id="bone-reset-btn" data-i18n="bone_reset">Knochen zurücksetzen</button>
+          <button class="btn stop" id="pose-clear-btn" data-i18n="pose_clear">Alles zurücksetzen</button>
+        </div>
+        <div class="hint" data-i18n="axis_hint">Achsen gelten lokal am Knochen. Tipp: erst „Einfrieren“, dann nachjustieren.</div>
+      </div>
+      <div class="row">
+        <input id="pose-name" type="text" data-i18n-ph="pose_name_ph" placeholder="Name der Pose">
+        <button class="btn custom" id="pose-save-btn" data-i18n="pose_save">Speichern</button>
+      </div>
+      <div id="pose-list"></div>
+    </div>
+
+    <div id="status" data-i18n="ready">Bereit. F9 zum Ein-/Ausblenden.</div>
+  </div>
+</div>
+<!-- REQUIRED SCRIPTS -- DO NOT REMOVE OR REORDER:
+     cohtml.js -> inzoi-sdk.js -> window.js -> app.js
+     lang.js (Texte DE/EN) wird vor window.js geladen, poser.js und aimotion.js nach app.js. -->
+<script src="coui://inzoi/cohtml.js"></script>
+<script src="coui://inzoi/mod/inzoi-sdk.js"></script>
+<script src="lang.js"></script>
+<script src="window.js"></script>
+<script src="app.js"></script>
+<script src="poser.js"></script>
+<script src="aimotion.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+	"name": "Animation Player",
+	"entry": "index.html",
+	"display":
+	{
+		"width": 1920,
+		"height": 1080,
+		"transparent": true,
+		"input_policy": "overlay"
+	},
+	"triggers": [
+		{
+			"id": "keybind_0",
+			"type": "keybind",
+			"key": "F9"
+		},
+		{
+			"id": "command_0",
+			"type": "command",
+			"command": "animation_player.toggle"
+		}
+	]
+}

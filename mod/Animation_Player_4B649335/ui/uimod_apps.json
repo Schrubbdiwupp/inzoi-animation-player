@@ -1,0 +1,9 @@
+{
+	"apps": [
+		{
+			"name": "animation_player",
+			"default": true,
+			"enabled": true
+		}
+	]
+}

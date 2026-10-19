@@ -1,0 +1,101 @@
+{
+	"Struct": "AnimCharacter",
+	"PatchList": [
+		{
+			"Method": "Append",
+			"Query": "AnimCharacter_Interaction",
+			"Value": {
+				"Id": "MyMod_Dance_01",
+				"Comment": "Example: one CharacterAnim row = one ID the Animation Player can play",
+				"AttachMeshInfos": [],
+				"PlayingComponentName": "Root",
+				"StopOtherComponentOnFinish": true,
+				"StartAnimSection": "Default",
+				"CharacterAnimConfigList": [
+					{
+						"AnimPostureId": [
+							"Stand"
+						],
+						"AnimBodyParts": "None",
+						"AnimGrabParts": "None",
+						"AnimSlotDirection": "None",
+						"AnimInfoList": [
+							{
+								"Gender": "Female",
+								"AnimGrowthStep": "Youth",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_F_Montage.MyMod_Dance_01_F_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Male",
+								"AnimGrowthStep": "Youth",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_M_Montage.MyMod_Dance_01_M_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Female",
+								"AnimGrowthStep": "Adult",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_F_Montage.MyMod_Dance_01_F_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Male",
+								"AnimGrowthStep": "Adult",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_M_Montage.MyMod_Dance_01_M_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Female",
+								"AnimGrowthStep": "Old",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_F_Montage.MyMod_Dance_01_F_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Male",
+								"AnimGrowthStep": "Old",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_M_Montage.MyMod_Dance_01_M_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Female",
+								"AnimGrowthStep": "Elderly",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_F_Montage.MyMod_Dance_01_F_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							},
+							{
+								"Gender": "Male",
+								"AnimGrowthStep": "Elderly",
+								"Animation": "/Script/Engine.AnimMontage'/MyMod_12345678/MyMod_Dance_01_M_Montage.MyMod_Dance_01_M_Montage'",
+								"TotalPlayLength": 0,
+								"LoopPlayLength": 0,
+								"RateScale": 1,
+								"RandomLoopAnims": []
+							}
+						]
+					}
+				]
+			}
+		}
+	]
+}
