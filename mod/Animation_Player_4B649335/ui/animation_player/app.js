@@ -118,7 +118,6 @@
     var ALL_MAX      = 500;
     var ALL_CHARS    = 'abcdefghijklmnopqrstuvwxyz0123456789_'.split('');
     var CFG_SECTION  = 'ui/' + wf.APP_NAME + '/saved';
-    var LOOP_POLL_MS = 400;
 
     var targetsEl   = document.getElementById('targets');
     var catsEl      = document.getElementById('cats');
@@ -324,7 +323,7 @@
         if (id === targetId) { setStatus(t('target_same', label)); return; }
         targetId = id;
         highlightTarget();
-        stopLoopWatch();          // Loop gehört zum alten Ziel
+        // v2.4: Loops laufen pro Zoi weiter (Feedback: zweiter Zoi stoppte den ersten)
         cancelHold();
         lastPlayedId = null;
         setStatus(t('target_set', label));
@@ -736,14 +735,50 @@
     });
 
     // ------------------------------------------------------------------
-    // Loop-Modus
-    //   Nach dem Start wird regelmäßig motion.get_current abgefragt. Ist die
-    //   Animation beendet (nicht mehr aktiv bzw. Laufzeit überschritten),
-    //   wird sie erneut gestartet. Animationen mit eigener Loop-Sektion
-    //   laufen ohnehin weiter und werden dabei nicht unterbrochen.
+    // Loop-Modus (v2.4): die unsichtbare App animation_player_loop führt die Loops aus – auch wenn
+    //   dieses Fenster geschlossen ist (Fenster wird beim Schließen entfernt, sein JavaScript stoppt).
+    //   Hier werden nur Aufträge pro Zoi in saved/loopjobs.cfg geschrieben:
+    //   { jobs: { "<entity_id>": { kind: "anim", ids: [...], random: bool, current: id } | { kind: "ai", slot: n } } }
+    //   Mehrere Zois können gleichzeitig loopen; ein Zielwechsel stoppt nichts mehr.
     // ------------------------------------------------------------------
     var loopEnabled = false;
-    var loop = null;   // { id, startedAt, length, seen, timer, busy }
+    var jobs = {};             // entity_id -> Auftrag (Spiegel der cfg; nur dieses Fenster schreibt)
+    var jobsTimer = null;
+
+    function saveJobs() {
+        if (jobsTimer) clearTimeout(jobsTimer);
+        jobsTimer = setTimeout(function () {
+            jobsTimer = null;
+            cli('uimod.cfg_save', { mod_id: wf.MOD_ID, section: CFG_SECTION, key: 'loopjobs', value: JSON.stringify({ jobs: jobs }) })
+                .catch(function (e) { setStatus(t('save_failed', errText(e)), true); });
+        }, 80);
+    }
+
+    function loadJobs() {
+        cli('uimod.cfg_load', { mod_id: wf.MOD_ID, section: CFG_SECTION, key: 'loopjobs' })
+            .then(function (res) {
+                var raw = cfgValue(res), o = null;
+                try { o = (typeof raw === 'string') ? JSON.parse(raw) : raw; } catch (e) { o = null; }
+                jobs = (o && o.jobs && typeof o.jobs === 'object') ? o.jobs : {};
+            }).catch(function () { jobs = {}; });
+    }
+
+    // entity_id des Ziels (auch für „Mein Zoi“ eine echte ID, damit der Auftrag am richtigen Zoi hängt)
+    function targetEntity() {
+        if (targetId !== null) return Promise.resolve(String(targetId));
+        return cli('entity.get_possessed', {}).then(function (res) {
+            var r = unwrap(res);
+            if (r && typeof r === 'object' && r.entity_id !== undefined) return String(r.entity_id);
+            var m = String(typeof r === 'string' ? r : JSON.stringify(r)).match(/\d+/);
+            if (!m) throw { message: t('ai_no_zoi') };
+            return m[0];
+        });
+    }
+
+    function setJob(ent, job) {
+        if (job) jobs[ent] = job; else delete jobs[ent];
+        saveJobs();
+    }
 
     function setLoopEnabled(on) {
         loopEnabled = !!on;
@@ -753,52 +788,39 @@
         if (!loopEnabled) stopLoopWatch();
     }
 
+    // Auftrag für den aktuellen Ziel-Zoi entfernen (andere Zois loopen weiter)
     function stopLoopWatch() {
-        if (loop && loop.timer) clearInterval(loop.timer);
-        loop = null;
+        return targetEntity().then(function (ent) { if (jobs[ent]) setJob(ent, null); }).catch(function () {});
     }
 
+    // Auftrag für den aktuellen Ziel-Zoi: Zufall → nacheinander zufällig aus der Liste, sonst diese eine Animation
     function startLoopWatch(id) {
-        stopLoopWatch();
-        loop = { id: id, startedAt: Date.now(), length: 0, seen: false, timer: null, busy: false };
-        var l = loop;
-        cli('motion.get_info', { anim_id: id })
-            .then(function (res) {
-                var info = unwrap(res);
-                if (info && typeof info.total_length === 'number') l.length = info.total_length;
-            })
-            .catch(function () {});
-        l.timer = setInterval(function () { loopTick(l); }, LOOP_POLL_MS);
+        return targetEntity().then(function (ent) {
+            var ids = randomOn && randomPool.length ? randomPool.slice(0, 400) : [id];
+            setJob(ent, { kind: 'anim', ids: ids, random: !!(randomOn && ids.length > 1), current: id });
+        }).catch(function (e) { setStatus(t('loop_aborted', errText(e)), true); });
     }
 
-    function loopTick(l) {
-        if (loop !== l || l.busy || frozen) return;
-        var elapsed = (Date.now() - l.startedAt) / 1000;
-        if (elapsed < 0.8) return;   // kurz warten, bis die Animation angelaufen ist
-        l.busy = true;
-        cli('motion.get_current', {})
-            .then(function (res) {
-                if (loop !== l) return;
-                var cur = unwrap(res) || {};
-                var motions = Array.isArray(cur.motions) ? cur.motions : [];
-                var active = motions.some(function (m) { return m && m.anim_id === l.id; });
-                if (active) { l.seen = true; return; }
-                // Beendet: war sichtbar aktiv und ist es nicht mehr, oder
-                // (z.B. Kopf-Animationen) die bekannte Laufzeit ist abgelaufen.
-                var timeUp = l.length > 0 ? elapsed > l.length / speed + 0.3 : elapsed > 10;
-                if (l.seen || timeUp) restartLoop(l);
-            })
-            .catch(function () {})
-            .then(function () { l.busy = false; });
+    // ------------------------------------------------------------------
+    // Zufall (v2.4: Schalter statt Einmal-Knopf): „Abspielen“ wählt zufällig aus der angezeigten Liste,
+    //   mit Loop geht es danach zufällig weiter. Erwachsenen-Animationen nur bei passendem Alter.
+    // ------------------------------------------------------------------
+    var randomOn = false;
+    var randomPool = [];
+    var randomBtn = document.getElementById('random-btn');
+
+    function setRandomOn(on) {
+        randomOn = !!on;
+        randomBtn.textContent = t(randomOn ? 'random_on' : 'random_off');
+        randomBtn.className = 'btn random' + (randomOn ? ' on' : '');
+        wf.state.random = randomOn;
     }
 
-    function restartLoop(l) {
-        l.startedAt = Date.now();
-        l.seen = false;
-        cli('motion.play', { anim_id: l.id }).catch(function (e) {
-            setStatus(t('loop_aborted', errText(e)), true);
-            stopLoopWatch();
-        });
+    function buildRandomPool() {
+        var pool = shownIds.slice();
+        if (!pool.some(isAdultOnly)) return Promise.resolve(pool);
+        return checkAdult().then(function () { return pool; })
+            .catch(function () { return pool.filter(function (id) { return !isAdultOnly(id); }); });
     }
 
     loopBtn.addEventListener('click', function () {
@@ -1167,46 +1189,21 @@
             });
     }
 
-    function playRandom() {
-        // In "Eigene", "Alle", "Mod-Anims" und "Posen": zufällig aus der angezeigten Liste
-        if (currentFilter === CUSTOM_KEY || currentFilter === ALL_KEY || currentFilter === MODS_KEY ||
-            currentFilter === POSES_KEY) {
-            if (!shownIds.length) { setStatus(t('list_is_empty'), true); return; }
-            play(shownIds[Math.floor(Math.random() * shownIds.length)]);
-            return;
-        }
-        var filter = (searchEl.value || currentFilter || '').trim();
-        if (!filter) { setStatus(t('random_need_filter'), true); return; }
-        setStatus(t('random_start', filter));
-        cancelHold();
-        // Könnte der Filter eine Erwachsenen-Animation treffen -> erst Alter prüfen
-        var f = filter.toLowerCase();
-        var risky = ADULT_ONLY.some(function (a) { return a.toLowerCase().indexOf(f) >= 0; });
-        (risky ? checkAdult() : Promise.resolve())
-            .then(function () { return debugResume(); })
-            .then(function () { return cli('motion.play_random', { filter: filter }); })
-            .then(function (res) {
-                var r = unwrap(res);
-                var id = r && r.anim_id;
-                progReset(); progStart();
-                if (id) {
-                    lastPlayedId = id;
-                    if (loopEnabled) startLoopWatch(id);
-                    armHold(id);
-                    if (speed !== 1) respeedCurrent();   // Montage erst jetzt bekannt
-                } else {
-                    stopLoopWatch();
-                    lastPlayedId = null;
-                }
-                setStatus(t('playing_random', id || filter) +
-                          (loopEnabled && !id ? ' - ' + t('loop_no_id') : (loopEnabled ? ' (Loop)' : '')));
-            })
-            .catch(function (e) { setStatus(t('error', errText(e)), true); });
+    // „Abspielen“: mit Zufall-Schalter eine zufällige Animation aus der angezeigten Liste
+    function playPressed() {
+        if (!randomOn) { play(selectedId); return; }
+        if (!shownIds.length) { setStatus(t('random_need_list'), true); return; }
+        buildRandomPool().then(function (pool) {
+            if (!pool.length) { setStatus(t('list_is_empty'), true); return; }
+            randomPool = pool;
+            play(pool[Math.floor(Math.random() * pool.length)]);
+        });
     }
 
+    // Stopp: nur der gewählte Zoi (andere Zois loopen weiter)
     function stopAll() {
         progStop(); progReset();
-        stopLoopWatch();          // Loop-Wiederholung beenden (Loop-Schalter bleibt)
+        stopLoopWatch();          // Loop-Auftrag dieses Zois beenden (Loop-Schalter bleibt)
         cancelHold();
         lastPlayedId = null;
         var wasFrozen = frozen;
@@ -1219,9 +1216,26 @@
             .catch(function (e) { setStatus(t('stop_failed', errText(e)), true); });
     }
 
-    document.getElementById('play-btn').addEventListener('click', function () { play(selectedId); });
-    document.getElementById('random-btn').addEventListener('click', playRandom);
+    // Alle stoppen: jeden Zoi mit Loop-Auftrag (Animation oder KI-Bewegung) und den gewählten Zoi
+    function stopEveryone() {
+        var ents = Object.keys(jobs), was = jobs;
+        jobs = {};
+        saveJobs();
+        stopAll();
+        Promise.all(ents.map(function (ent) {
+            return (was[ent].kind === 'ai'
+                ? cli('interaction.cancel', { entity_id: ent })
+                : cli('motion.stop', { entity_id: ent })).catch(function () {});
+        })).then(function () { setStatus(t('stopped_all', ents.length)); });
+    }
+
+    document.getElementById('play-btn').addEventListener('click', playPressed);
+    randomBtn.addEventListener('click', function () {
+        setRandomOn(!randomOn);
+        setStatus(t(randomOn ? 'random_info_on' : 'random_info_off'));
+    });
     document.getElementById('stop-btn').addEventListener('click', stopAll);
+    document.getElementById('stopall-btn').addEventListener('click', stopEveryone);
     // In "Alle" filtert das Suchfeld lokal, sonst wird im Spiel gesucht.
     function doSearch() {
         if (currentFilter === ALL_KEY && allCache) showAll();
@@ -1279,6 +1293,7 @@
             if (c.mine) { c.el.textContent = t('my_zoi'); c.el.title = t('my_zoi_tip'); }
         });
         setLoopEnabled(loopEnabled);
+        setRandomOn(randomOn);
         setDebugEnabled(debugEnabled);
         setFrozen(frozen);
         langBtn.textContent = I18N.lang.toUpperCase();
@@ -1339,6 +1354,7 @@
         if (!s) return;
         if (s.lastFilter) { searchEl.value = s.lastFilter; highlightCategory(s.lastFilter); }
         if (typeof s.loop === 'boolean') setLoopEnabled(s.loop);
+        if (typeof s.random === 'boolean') setRandomOn(s.random);
         if (typeof s.debug === 'boolean') setDebugEnabled(s.debug);
         if (typeof s.speed === 'number') setSpeed(s.speed, false);
         if (typeof s.hold === 'boolean') holdEl.setChecked(s.hold);
@@ -1361,13 +1377,17 @@
         setStatus: setStatus,
         cfgSection: CFG_SECTION,
         getTarget: function () { return targetId; },
+        setJob: setJob,           // Loop-Auftrag pro Zoi (für aimotion.js)
+        getJob: function (ent) { return jobs[String(ent)] || null; },
         onTarget: function (fn) { targetListeners.push(fn); },
         onTab: function (fn) { tabListeners.push(fn); }
     };
 
     I18N.apply();
     setLoopEnabled(false);
+    setRandomOn(false);
     setFrozen(false);
+    loadJobs();
     initLanguage();
     loadCustom();
     loadModAnims();

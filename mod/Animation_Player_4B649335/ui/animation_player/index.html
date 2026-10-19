@@ -66,6 +66,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .btn.custom { border-color: rgba(255,200,80,0.8); }
 .btn.custom.active { background: rgba(230,170,40,0.6); }
 .btn.loop.on { background: rgba(230,170,40,0.7); border-color: rgba(255,210,110,1); }
+.btn.random.on { background: rgba(150,90,220,0.7); border-color: rgba(200,160,255,1); }
 .btn.debug.on { background: rgba(60,170,120,0.7); border-color: rgba(120,230,170,1); }
 .item .dur { flex-shrink: 0; margin-left: auto; opacity: 0.55; font-size: 12px; }
 .prog-row { align-items: center; }
@@ -202,8 +203,9 @@ button, .btn, input, textarea, select { font-family: var(--inzoi-font-ui) !impor
       <div class="row">
         <button class="btn play" id="play-btn" data-i18n="play">Abspielen</button>
         <button class="btn loop" id="loop-btn">Loop: Aus</button>
-        <button class="btn" id="random-btn" data-i18n="random">Zufall</button>
-        <button class="btn stop" id="stop-btn" data-i18n="stop">Stopp</button>
+        <button class="btn random" id="random-btn" data-i18n-title="random_tip">Zufall: Aus</button>
+        <button class="btn stop" id="stop-btn" data-i18n="stop" data-i18n-title="stop_tip">Stopp</button>
+        <button class="btn stop" id="stopall-btn" data-i18n="stop_all" data-i18n-title="stop_all_tip">Alle stoppen</button>
         <button class="btn debug" id="debug-btn" data-i18n-title="debug_tip">Debug: Aus</button>
       </div>
       <div class="row">

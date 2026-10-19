@@ -212,22 +212,14 @@
                 if (cur.playing && cur.interaction_bag_id === BAG_PREFIX + r.slot) { r.seen = true; return; }
                 // Nie gesehen und nach 10 s nichts: Slot vermutlich leer
                 if (!r.seen && elapsed < 10) return;
-                if (loopOn && r.seen) { restart(r); return; }
+                // Loop: den Neustart macht die Hintergrund-App (animation_player_loop), hier nur die Anzeige zurücksetzen
+                if (r.seen && AP.getJob(r.zoi)) { r.startedAt = Date.now(); r.seen = false; return; }
                 progFill.style.width = '100%';
                 stopWatch();
                 AP.setStatus(r.seen ? t('ai_done', labelOf(r.slot)) : t('ai_empty_slot', r.slot + 1), !r.seen);
             })
             .catch(function () {})
             .then(function () { r.busy = false; });
-    }
-
-    function restart(r) {
-        r.startedAt = Date.now();
-        r.seen = false;
-        execSlot(r.slot, r.zoi).catch(function (e) {
-            AP.setStatus(t('loop_aborted', AP.errText(e)), true);
-            stopWatch();
-        });
     }
 
     function play(slot) {
@@ -244,6 +236,7 @@
             })
             .then(function () { return execSlot(slot, zoi); })
             .then(function () {
+                AP.setJob(String(zoi), loopOn ? { kind: 'ai', slot: slot } : null);
                 startWatch(slot, zoi);
                 AP.setStatus(t(loopOn ? 'playing_loop' : 'playing', labelOf(slot)));
             })
@@ -255,7 +248,7 @@
         stopWatch();
         progReset();
         var p = r ? Promise.resolve(r.zoi) : resolveZoi();
-        p.then(function (zoi) { return AP.cli('interaction.cancel', { entity_id: zoi }); })
+        p.then(function (zoi) { AP.setJob(String(zoi), null); return AP.cli('interaction.cancel', { entity_id: zoi }); })
             .then(function () { AP.setStatus(t('stopped')); })
             .catch(function (e) { AP.setStatus(t('stop_failed', AP.errText(e)), true); });
     }
@@ -270,6 +263,8 @@
     loopBtn.addEventListener('click', function () {
         setLoop(!loopOn);
         AP.setStatus(t(loopOn ? 'loop_info_on' : 'loop_info_off'));
+        // laufende KI-Bewegung gleich mitloopen bzw. Loop-Auftrag beenden
+        if (run) AP.setJob(String(run.zoi), loopOn ? { kind: 'ai', slot: run.slot } : null);
     });
     document.getElementById('ai-play-btn').addEventListener('click', function () { play(selected); });
     document.getElementById('ai-stop-btn').addEventListener('click', stop);
@@ -293,7 +288,7 @@
         if (e.key === 'Enter' || e.keyCode === 13) rename();
     });
 
-    // Ziel gewechselt: laufende Wiederholung gehört zum alten Zoi
+    // Ziel gewechselt: nur die Anzeige gehört zum alten Zoi, sein Loop läuft weiter
     AP.onTarget(function () { stopWatch(); progReset(); });
     AP.onTab(function (name) { if (name === 'ai' && !listEl.querySelector('.item')) load(); });
     I18N.onChange(function () { setLoop(loopOn); render(); });

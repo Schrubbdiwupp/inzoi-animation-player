@@ -6,7 +6,7 @@ A UI mod for **inZOI** (toggle with **F9**): play any animation or pose on any Z
 
 ## Features
 
-- **Animations tab** – search all game and mod animations (categories, full list, favourites), loop, speed 0.25–3x, random, freeze / pause at the end for photos, progress bar with length.
+- **Animations tab** – search all game and mod animations (categories, full list, favourites), loop (keeps running with the window closed, one loop per Zoi), speed 0.25–3x, random toggle (with loop: random playlist), stop / stop all, freeze / pause at the end for photos, progress bar with length.
 - **AI Motions tab** – plays the AI motions you created in the game (*click a Zoi > AI Emote*), with loop, stop, progress bar and custom slot names.
 - **Pose Editor** – bend single bones (additive or replace), save and load your own poses.
 - **Target Zoi** – your Zoi, the Zoi in front of the camera, Zois nearby or your household.
@@ -39,7 +39,7 @@ Ein UI-Mod für **inZOI** (Ein-/Ausblenden mit **F9**): beliebige Animationen un
 
 ### Funktionen
 
-- **Reiter Animationen** – alle Spiel- und Mod-Animationen durchsuchen (Kategorien, Gesamtliste, Favoriten), Loop, Tempo 0,25–3x, Zufall, Einfrieren / am Ende anhalten für Fotos, Fortschrittsbalken mit Länge.
+- **Reiter Animationen** – alle Spiel- und Mod-Animationen durchsuchen (Kategorien, Gesamtliste, Favoriten), Loop (läuft auch bei geschlossenem Fenster, eigener Loop pro Zoi), Tempo 0,25–3x, Zufall-Schalter (mit Loop: zufällige Abfolge), Stopp / Alle stoppen, Einfrieren / am Ende anhalten für Fotos, Fortschrittsbalken mit Länge.
 - **Reiter KI-Bewegungen** – spielt die KI-Bewegungen ab, die du im Spiel erstellt hast (*Zoi anklicken > KI-Emote*), mit Loop, Stopp, Fortschrittsbalken und eigenen Slot-Namen.
 - **Pose-Editor** – einzelne Knochen verbiegen (additiv oder ersetzen), eigene Posen speichern und laden.
 - **Ziel-Zoi** – dein Zoi, der Zoi vor der Kamera, Zois in der Nähe oder dein Haushalt.

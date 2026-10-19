@@ -55,8 +55,13 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
   "Nur passende für diesen Zoi" blendet Animationen aus, die für Alter,
   Geschlecht oder Haltung des Zois nicht passen.
 
-  Abspielen / Zufall / Stopp   selbsterklärend
-  Loop        wiederholt die Animation endlos
+  Abspielen   spielt die gewählte Animation auf dem Ziel-Zoi ab
+  Loop        wiederholt die Animation endlos – auch wenn das Fenster (F9)
+              geschlossen ist. Jeder Zoi kann seinen eigenen Loop haben.
+  Zufall      Schalter (lila = an): "Abspielen" wählt zufällig aus der
+              angezeigten Liste. Mit Loop geht es danach zufällig weiter.
+  Stopp       stoppt nur den gewählten Ziel-Zoi
+  Alle stoppen   stoppt alle Zois mit laufender Animation oder Loop
   Debug       Abspielen hebt die Spielpause auf, Stopp pausiert das Spiel
               (praktisch für Mocap- und Video-Aufnahmen)
   Einfrieren  hält die Spielzeit an, die aktuelle Pose bleibt stehen.
@@ -78,7 +83,8 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
   in 30 feste Plätze (Slots), sortiert nach dem Ordnernamen.
 
   - Doppelklick auf einen Eintrag oder "Abspielen": der Ziel-Zoi spielt ihn ab.
-  - "Loop": startet die Bewegung nach dem Ende automatisch neu.
+  - "Loop": startet die Bewegung nach dem Ende automatisch neu (auch bei
+    geschlossenem Fenster, mehrere Zois gleichzeitig möglich).
   - "Stopp": bricht die Bewegung ab.
   - "Umbenennen": eigener Name für den gewählten Slot (leer = Name zurück).
 

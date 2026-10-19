@@ -1,0 +1,17 @@
+{
+	"name": "animation_player_loop",
+	"entry": "index.html",
+	"display":
+	{
+		"width": 1920,
+		"height": 1080,
+		"transparent": true,
+		"input_policy": "passthrough"
+	},
+	"triggers": [
+		{
+			"id": "always_on_0",
+			"type": "always_on"
+		}
+	]
+}

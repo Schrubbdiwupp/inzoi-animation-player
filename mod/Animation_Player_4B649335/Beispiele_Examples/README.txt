@@ -54,8 +54,13 @@ target Zoi.
   "Only matching for this Zoi" hides animations that don't fit the Zoi's
   age, gender or posture.
 
-  Play / Random / Stop   self-explanatory
-  Loop        repeats the animation endlessly
+  Play        plays the selected animation on the target Zoi
+  Loop        repeats the animation endlessly - even with the window (F9)
+              closed. Every Zoi can have its own loop.
+  Random      toggle (purple = on): Play picks a random animation from the
+              shown list. With Loop it keeps going randomly.
+  Stop        stops only the selected target Zoi
+  Stop all    stops every Zoi with a running animation or loop
   Debug       Play unpauses the game, Stop pauses it
               (handy for mocap and video recordings)
   Freeze      stops game time, the current pose stays.
@@ -77,7 +82,8 @@ target Zoi.
   into 30 fixed slots, sorted by folder name.
 
   - Double-click an entry or "Play": the target Zoi plays it.
-  - "Loop": restarts the motion automatically when it ends.
+  - "Loop": restarts the motion automatically when it ends (also with the
+    window closed, several Zois at once).
   - "Stop": cancels the motion.
   - "Rename": custom name for the selected slot (empty = name back).
 

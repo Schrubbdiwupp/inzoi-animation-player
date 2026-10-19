@@ -4,6 +4,11 @@
 			"name": "animation_player",
 			"default": true,
 			"enabled": true
+		},
+		{
+			"name": "animation_player_loop",
+			"default": false,
+			"enabled": true
 		}
 	]
 }
