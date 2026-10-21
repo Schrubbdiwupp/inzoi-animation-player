@@ -48,12 +48,24 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
   Posen       Foto-Posen des Spiels (Katzenherz, Selfie, Muskeln, an der
               Wand lehnen, auf dem Boden sitzen, ...) + deine pose_anims.cfg
   Mod-Anims   Animationen aus anderen Mods (siehe Abschnitt 6)
-  * Eigene    deine Favoriten
+  * Eigene    deine Favoriten und benannten Listen (siehe unten)
   Tanzen, Winken, ...   schnelle Suchkategorien
 
   Klick auf einen Eintrag = auswählen, zweiter Klick = abspielen.
   "Nur passende für diesen Zoi" blendet Animationen aus, die für Alter,
-  Geschlecht oder Haltung des Zois nicht passen.
+  Geschlecht oder Haltung des Zois nicht passen. Das gilt auch für die
+  festen Listen (Eigene, eigene Listen, Mod-Anims, Posen): jeder Eintrag
+  wird für den gewählten Zoi geprüft. Ist der Schalter aus, werden
+  unpassende Einträge nur durchgestrichen. Gut für Teenager und Kinder.
+
+  Benannte Listen (unter "* Eigene"):
+    Neben "Eigene" kannst du beliebig viele eigene Listen anlegen, z. B.
+    "media-1", "emo-happy", "emo-sad". Namen eintippen -> "+ Neu".
+    Liste antippen = wählen. "Umbenennen" und "Löschen" (zweimal klicken)
+    wirken auf die gewählte Liste. "* Zu Liste" speichert die markierte
+    Animation in der gewählten Liste.
+    Jede Liste ist eine Datei saved\lists\<Name>.cfg. Du kannst solche
+    Dateien auch selbst anlegen oder weitergeben, danach "Neu laden".
 
   Abspielen   spielt die gewählte Animation auf dem Ziel-Zoi ab
   Loop        wiederholt die Animation endlos – auch wenn das Fenster (F9)
@@ -71,7 +83,7 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
               damit die letzte Pose stehen bleibt. Ideal für Fotos.
               "Auftauen" (oder Play im Spiel) läuft weiter.
   Tempo       0,25x bis 3x
-  * Auswahl zu Eigene   speichert die gewählte Animation als Favorit
+  * Zu Liste: ...   speichert die gewählte Animation in der gewählten Liste
 
 
 ------------------------------------------------------------------------------
@@ -130,6 +142,7 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
   Documents\inZOI\Mods\InGame\Animation_Player_4B649335\ui\animation_player\saved\
 
   custom.cfg       deine "* Eigene"-Liste
+  lists\         deine benannten Listen, je eine <Name>.cfg
   mod_anims.cfg    Liste für den Knopf "Mod-Anims"     (legst DU an)
   pose_anims.cfg   zusätzliche Posen für "Posen"        (legst DU an)
   poses.cfg        gespeicherte Posen des Pose-Editors
@@ -195,6 +208,10 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
     - Die jeweilige Mod muss installiert und aktiv sein.
     - Animationen aus mod_anims.cfg werden nur auf Zois ab "junger
       Erwachsener" abgespielt (Schutz für Kinder/Teenager).
+      Ausnahme: ein + vor der ID gibt sie für alle Altersstufen frei,
+      z. B. ["+Self_TakePhoto","+Multi_Smartphone_Check","Lover_DeepKiss_MF"].
+      Spiel-Animationen für Teenager besser gleich in "* Eigene" oder eine
+      eigene Liste packen - dort gibt es keine Alterssperre.
     - Eigene Posen statt Mod-Animationen? Gleiches Prinzip mit
       pose_anims.cfg - die Einträge erscheinen dann unter "Posen".
 
@@ -232,8 +249,14 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
          Tippfehler? Jede ID braucht Anführungszeichen, Kommas dazwischen,
          eckige Klammern außen.
 
-  "Diese Animation ist nur für Erwachsene"
-      -> Mod-Animationen laufen nur ab junger Erwachsener.
+  "Mod-Animationen sind nur für Erwachsene"
+      -> Einträge aus mod_anims.cfg laufen nur ab junger Erwachsener.
+         Für alle Altersstufen ein + vor die ID setzen (siehe Abschnitt 6)
+         oder die Animation in "* Eigene" / eine eigene Liste legen.
+
+  Zoi dreht sich beim Loop zwischen zwei Durchläufen einmal im Kreis
+      -> Seit 2.5 deutlich seltener (genauer Neustart vor dem Ausblenden).
+         Bei sehr starken Rucklern kann es noch vorkommen.
 
   "Keine Treffer" / Animation startet nicht
       -> Haken "Nur passende für diesen Zoi" entfernen und erneut

@@ -9,7 +9,11 @@
  *     KI-Bewegung:   { kind: "ai", slot: n }
  * Pro Zoi läuft ein eigener Loop (mehrere Zois gleichzeitig möglich).
  *
- * Animation: Neustart kurz VOR dem Ende (Restzeit ≤ LEAD), damit der Zoi nicht erst ins Idle fällt und sich dabei dreht.
+ * Animation: Neustart kurz VOR dem Ausblenden, damit der Zoi nicht erst ins Idle fällt und sich dabei dreht.
+ *   v2.5: genauer Timer statt nur Abfrage. Bei Rucklern oder langsamen Antworten wurde das 0,3-s-Fenster
+ *   vor dem Ende manchmal verpasst (Feedback: Dreher kam unregelmäßig wieder). Der Neustartpunkt
+ *   berücksichtigt jetzt blend_out_time der Montage, die gemessene Antwortzeit und das tatsächlich
+ *   gemessene Abspieltempo (Spielgeschwindigkeit, Tempo-Regler).
  * Montagen mit eigenem Loop-Abschnitt laufen von selbst weiter und werden nicht angefasst.
  * Zufall: nächste Animation zufällig aus ids (nicht zweimal dieselbe hintereinander).
  * KI-Bewegung: Interaktion Self_GeneratedMotionSlot<n> nach dem Ende neu starten.
@@ -23,8 +27,10 @@
     var KEY = 'loopjobs';
     var CFG_MS = 500;          // Aufträge neu lesen
     var POLL_MS = 150;         // Zustand je Zoi abfragen
-    var LEAD = 0.30;           // Sekunden vor dem Ende neu starten (vor dem Ausblenden)
+    var MARGIN = 0.12;         // Sekunden (Animationszeit) vor Beginn des Ausblendens neu starten
+    var BLEND_DEFAULT = 0.25;  // falls die Montage kein blend_out_time meldet
     var BAG = 'Self_GeneratedMotionSlot';
+    var latency = 0.08;        // gemessene Antwortzeit von motion.get_current (s), gleitender Mittelwert
 
     if (wf.root) wf.root.style.display = 'none';
 
@@ -42,17 +48,25 @@
         });
     }
 
-    var runners = {};          // entity_id -> { job, busy, seen, fired, startedAt }
+    var runners = {};          // entity_id -> { job, busy, seen, fired, startedAt, timer, est, lastPos, lastT }
     var lastRaw = null;
-    var loopInfo = {};         // anim_id -> true (Montage hat Loop-Abschnitt) / false
+    var motionInfo = {};       // "<entity_id>|<anim_id>" -> { loops, blend } (Montage hängt von Alter/Geschlecht ab)
 
-    function hasLoopSection(id, ent) {
-        if (loopInfo[id] !== undefined) return Promise.resolve(loopInfo[id]);
+    function getInfo(id, ent) {
+        var k = ent + '|' + id;
+        if (motionInfo[k]) return Promise.resolve(motionInfo[k]);
         return cli('motion.get_info', { anim_id: id, entity_id: ent }).then(function (info) {
             info = info || {};
-            loopInfo[id] = Array.isArray(info.sections) && info.sections.some(function (s) { return s && s.is_loop; });
-            return loopInfo[id];
-        }).catch(function () { loopInfo[id] = false; return false; });
+            motionInfo[k] = {
+                loops: Array.isArray(info.sections) && info.sections.some(function (s) { return s && s.is_loop; }),
+                blend: (typeof info.blend_out_time === 'number' && info.blend_out_time >= 0) ? info.blend_out_time : BLEND_DEFAULT
+            };
+            return motionInfo[k];
+        }).catch(function () { return { loops: false, blend: BLEND_DEFAULT }; });
+    }
+
+    function clearTimer(r) {
+        if (r && r.timer) { clearTimeout(r.timer); r.timer = null; }
     }
 
     function nextAnim(job) {
@@ -65,7 +79,8 @@
 
     function start(ent, r) {
         var job = r.job;
-        r.fired = true; r.seen = false; r.startedAt = Date.now();
+        clearTimer(r);
+        r.fired = true; r.seen = false; r.startedAt = Date.now(); r.lastPos = null;
         if (job.kind === 'ai') {
             return cli('interaction.execute', { entity_id: ent, target_entity_id: ent, interaction_bag_id: BAG + job.slot, insert_front: true })
                 .catch(function () {});
@@ -76,21 +91,50 @@
 
     function tickAnim(ent, r) {
         var job = r.job;
+        var asked = Date.now();
         return cli('motion.get_current', { entity_id: ent }).then(function (cur) {
+            var now = Date.now();
+            latency = latency * 0.8 + Math.min(1, (now - asked) / 1000) * 0.2;
             cur = cur || {};
             var ms = Array.isArray(cur.motions) ? cur.motions : [];
+            // Nach einem Neustart kann die alte Instanz beim Ausblenden noch gemeldet werden → die jüngste nehmen
             var m = null;
-            for (var i = 0; i < ms.length; i++) { if (ms[i] && ms[i].anim_id === job.current) { m = ms[i]; break; } }
-            var elapsed = (Date.now() - r.startedAt) / 1000;
+            for (var i = 0; i < ms.length; i++) {
+                if (ms[i] && ms[i].anim_id === job.current && (!m || (ms[i].position || 0) < (m.position || 0))) m = ms[i];
+            }
+            var elapsed = (now - r.startedAt) / 1000;
             if (m) {
                 // kurz nach dem (Neu-)Start meldet das Spiel evtl. noch die alte Instanz kurz vor dem Ende → nicht doppelt starten
                 if (r.fired && elapsed < 0.6) return;
                 r.seen = true; r.fired = false;
                 if (typeof m.total_length !== 'number' || m.total_length <= 0) return;
+                var pos = m.position || 0;
+                // Tempo: rate_scale; nur wenn das über ≥ 1 s gemessene Tempo deutlich abweicht
+                // (z. B. Spielgeschwindigkeit x2/x3), das gemessene nehmen. Kurze Messungen schwanken zu stark.
                 var rate = (typeof m.rate_scale === 'number' && m.rate_scale > 0) ? m.rate_scale : 1;
-                var rest = (m.total_length - (m.position || 0)) / rate;
-                if (rest > LEAD) return;
-                return hasLoopSection(job.current, ent).then(function (loops) { if (!loops) return start(ent, r); });
+                if (r.lastPos === null || r.lastPos === undefined || pos < r.lastPos) { r.lastPos = pos; r.lastT = now; }
+                else if (now - r.lastT >= 1000) {
+                    var e = (pos - r.lastPos) / ((now - r.lastT) / 1000);
+                    r.est = (e > 0.05 && e < 10 && Math.abs(e - rate) / rate > 0.25) ? e : 0;
+                }
+                if (r.est) rate = r.est;
+                if (r.timer) return;   // Neustart ist schon genau geplant
+                var id = job.current;
+                return getInfo(id, ent).then(function (info) {
+                    if (info.loops) return;
+                    var at = Math.max(m.total_length * 0.5, m.total_length - info.blend - MARGIN);
+                    // echte Sekunden bis zum Neustartpunkt: die Position ist schon latency/2 alt,
+                    // und motion.play braucht nochmal etwa latency/2, bis es im Spiel ankommt
+                    var wait = (at - pos) / rate - latency;
+                    if (wait <= 0.03) return start(ent, r);
+                    // Liegt der Punkt vor der nächsten Abfrage (+ Antwortzeit + Reserve): Timer stellen
+                    if (wait < POLL_MS / 1000 + latency + 0.35) {
+                        r.timer = setTimeout(function () {
+                            r.timer = null;
+                            if (runners[ent] === r && r.job.current === id) start(ent, r);
+                        }, Math.round(wait * 1000));
+                    }
+                });
             }
             // nicht (mehr) aktiv: nach dem Ende neu starten; kurz nach dem Start ist sie evtl. noch nicht gemeldet
             if ((r.seen || elapsed > 3) && !(r.fired && elapsed < 1.0)) return start(ent, r);
@@ -125,12 +169,16 @@
             lastRaw = text;
             var obj = {}; try { obj = typeof raw === 'string' ? JSON.parse(raw) : (raw || {}); } catch (e) { obj = {}; }
             var jobs = (obj && obj.jobs) || {};
-            Object.keys(runners).forEach(function (ent) { if (!jobs[ent]) delete runners[ent]; });
+            Object.keys(runners).forEach(function (ent) { if (!jobs[ent]) { clearTimer(runners[ent]); delete runners[ent]; } });
             Object.keys(jobs).forEach(function (ent) {
                 var j = jobs[ent], r = runners[ent];
                 // Neuer Auftrag (anderer Typ/Slot/Start-Animation): frisch beginnen – das Fenster hat ihn gerade gestartet
                 var same = r && r.job.kind === j.kind && (j.kind === 'ai' ? r.job.slot === j.slot : r.cfgCurrent === j.current);
-                if (!same) { runners[ent] = { job: j, cfgCurrent: j.current, busy: false, seen: false, fired: true, startedAt: Date.now() }; return; }
+                if (!same) {
+                    clearTimer(r);
+                    runners[ent] = { job: j, cfgCurrent: j.current, busy: false, seen: false, fired: true, startedAt: Date.now(), timer: null, est: 0, lastPos: null, lastT: 0 };
+                    return;
+                }
                 // Unveränderter Auftrag (cfg wegen eines anderen Zois neu geschrieben): Zufall behält seine aktuelle Animation
                 if (j.kind === 'anim') j.current = r.job.current;
                 r.job = j;

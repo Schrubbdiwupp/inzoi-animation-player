@@ -47,12 +47,24 @@ target Zoi.
   Poses       photo poses of the game (cat heart, selfie, muscles, leaning
               against a wall, sitting on the floor, ...) + your pose_anims.cfg
   Mod anims   animations from other mods (see section 6)
-  * Own       your favorites
+  * Own       your favorites and named lists (see below)
   Dance, Wave, ...   quick search categories
 
   Click an entry = select, click again = play.
   "Only matching for this Zoi" hides animations that don't fit the Zoi's
-  age, gender or posture.
+  age, gender or posture. This now also applies to the fixed lists (Own,
+  your named lists, Mod anims, Poses): every entry is checked for the
+  selected Zoi. With the switch off, entries that don't fit are only
+  struck through. Handy for teens and children.
+
+  Named lists (under "* Own"):
+    Besides "Own" you can create as many lists as you like, e.g.
+    "media-1", "emo-happy", "emo-sad". Type a name -> "+ New".
+    Click a list = select it. "Rename" and "Delete" (click twice) work on
+    the selected list. "* Add to list" saves the highlighted animation in
+    the selected list.
+    Every list is a file saved\lists\<name>.cfg. You can also create or
+    share such files yourself, then click "Reload".
 
   Play        plays the selected animation on the target Zoi
   Loop        repeats the animation endlessly - even with the window (F9)
@@ -70,7 +82,7 @@ target Zoi.
               so the last pose stays. Ideal for photos.
               "Unfreeze" (or Play in the game) continues.
   Speed       0.25x to 3x
-  * Add to Own   saves the selected animation as a favorite
+  * Add to list: ...   saves the selected animation in the selected list
 
 
 ------------------------------------------------------------------------------
@@ -129,6 +141,7 @@ target Zoi.
   Documents\inZOI\Mods\InGame\Animation_Player_4B649335\ui\animation_player\saved\
 
   custom.cfg       your "* Own" list
+  lists\         your named lists, one <name>.cfg each
   mod_anims.cfg    list for the "Mod anims" button        (YOU create it)
   pose_anims.cfg   extra poses for "Poses"                 (YOU create it)
   poses.cfg        poses saved in the Pose Editor
@@ -193,6 +206,10 @@ target Zoi.
     - The mod in question must be installed and active.
     - Animations from mod_anims.cfg only play on Zois aged "young adult"
       or older (protection for children/teens).
+      Exception: a + in front of the ID allows it for all ages,
+      e.g. ["+Self_TakePhoto","+Multi_Smartphone_Check","Lover_DeepKiss_MF"].
+      Game animations for teens are best put in "* Own" or a named list -
+      there is no age lock there.
     - Want extra poses instead of mod animations? Same principle with
       pose_anims.cfg - the entries then appear under "Poses".
 
@@ -229,8 +246,14 @@ target Zoi.
          Typo? Every ID needs quotes, commas in between, square brackets
          around the whole list.
 
-  "This animation is for adults only"
-      -> Mod animations only play on young adults and older.
+  "Mod animations are for adults only"
+      -> Entries from mod_anims.cfg only play on young adults and older.
+         To allow all ages, put a + in front of the ID (see section 6),
+         or put the animation in "* Own" / a named list.
+
+  Zoi spins around once between two loop runs
+      -> Much rarer since 2.5 (precise restart before the blend-out).
+         It can still happen during very heavy stutters.
 
   "No results" / animation doesn't start
       -> Untick "Only matching for this Zoi" and try again. Some animations

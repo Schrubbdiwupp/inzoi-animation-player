@@ -75,6 +75,18 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 #prog-text { width: 96px; text-align: right; font-size: 12px; font-family: var(--inzoi-font-mono, Consolas, monospace); }
 .btn:disabled { opacity: 0.4; cursor: default; }
 #custom-add { display: none; }
+/* v2.5: benannte Listen, unpassende Animationen */
+#list-bar { display: none; flex-direction: column; gap: 4px; flex-shrink: 0; padding: 5px;
+            border-radius: 4px; background: rgba(255,200,80,0.08); }
+.list-chips { display: flex; flex-wrap: wrap; gap: 4px; max-height: 58px; overflow-y: auto; overscroll-behavior: contain; }
+.list-chips .btn.chip.active { background: rgba(230,170,40,0.6); border-color: rgba(255,210,110,1); }
+#list-name { flex: 1; min-width: 0; padding: 3px 7px; border-radius: 4px; font-size: 13px;
+             color: #ffffff; caret-color: #ffffff; background-color: rgba(255,255,255,0.16);
+             border: 1px solid rgba(255,200,80,0.7); }
+#list-name::placeholder { color: rgba(255,255,255,0.6); }
+#list-bar .row { flex-wrap: wrap; gap: 4px; }
+#list-bar #list-name { min-width: 130px; }
+.item.bad .name { opacity: 0.4; text-decoration: line-through; }
 #custom-id { border: 1px solid rgba(255,200,80,0.7); }
 .item { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -195,6 +207,16 @@ button, .btn, input, textarea, select { font-family: var(--inzoi-font-ui) !impor
       <div class="row opts">
         <div role="button" class="btn toggle on" id="validate"><span class="box"></span><span data-i18n="validate">Nur passende für diesen Zoi</span></div>
       </div>
+      <div id="list-bar">
+        <div class="list-chips" id="list-chips"></div>
+        <div class="row">
+          <input id="list-name" type="text" data-i18n-ph="list_name_ph" placeholder="Listenname (z.B. emo-happy)">
+          <button class="btn chip" id="list-new-btn" data-i18n="list_new">+ Neu</button>
+          <button class="btn chip" id="list-rename-btn" data-i18n="list_rename">Umbenennen</button>
+          <button class="btn chip stop" id="list-delete-btn" data-i18n="list_delete">Löschen</button>
+          <button class="btn chip" id="list-reload-btn" data-i18n="list_reload" data-i18n-title="list_reload_tip">Neu laden</button>
+        </div>
+      </div>
       <div class="row" id="custom-add">
         <input id="custom-id" type="text" data-i18n-ph="custom_ph" placeholder="Eigene Animations-ID eingeben">
         <button class="btn" id="custom-add-btn" data-i18n="custom_add">Hinzufügen</button>
@@ -225,7 +247,7 @@ button, .btn, input, textarea, select { font-family: var(--inzoi-font-ui) !impor
         <button class="btn chip" id="speed-reset">1x</button>
       </div>
       <div class="row">
-        <button class="btn custom" id="fav-btn" data-i18n="fav">* Auswahl zu Eigene</button>
+        <button class="btn custom" id="fav-btn">* Auswahl zu Eigene</button>
       </div>
     </div>
 

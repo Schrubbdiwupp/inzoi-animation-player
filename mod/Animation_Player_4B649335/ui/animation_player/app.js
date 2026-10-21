@@ -112,6 +112,16 @@
     // Erwachsenen-Animationen: werden nur auf Zois ab junger Erwachsener abgespielt.
     // (gleiches Array-Objekt wie MOD_ANIMS -> gilt automatisch für alle geladenen Mod-Anims)
     var ADULT_ONLY   = MOD_ANIMS;
+    // v2.5: Einträge mit "+" davor (z. B. "+Self_TakePhoto") sind für alle Altersstufen freigegeben
+    // (Feedback: Teens durften Spiel-Animationen aus mod_anims.cfg nicht abspielen).
+    var MOD_ALL_AGES = [];
+    // v2.5: benannte Listen, je eine Datei saved/lists/<Name>.cfg (JSON-Array mit IDs).
+    // '' = die bisherige Liste "Eigene" (saved/custom.cfg).
+    var LISTS_SECTION = 'ui/' + wf.APP_NAME + '/saved/lists';
+    var LIST_NAME_RE  = /^[A-Za-z0-9_-]{1,40}$/;
+    var namedLists    = {};       // Name -> [anim_id, ...]
+    var activeList    = '';
+    var listsLoaded   = false;
     var MAX_RESULTS  = 200;
     // motion.list liefert max. 500 Treffer pro Abfrage -> "Alle" fragt jedes
     // Zeichen einzeln ab und führt die Ergebnisse zusammen.
@@ -201,22 +211,33 @@
             : res;
     }
 
-    // JSON-Array mit Animations-IDs aus einer cfg-Datei lesen (doppelte/leere entfernt)
-    function loadIdList(key, target, done) {
+    // JSON-Array mit Animations-IDs aus einer cfg-Datei lesen (doppelte/leere entfernt).
+    // plus (optional): IDs mit "+" davor landen ohne "+" in target UND in plus.
+    function loadIdList(key, target, done, plus) {
         cli('uimod.cfg_load', { mod_id: wf.MOD_ID, section: CFG_SECTION, key: key })
             .then(function (res) {
-                var raw = cfgValue(res);
-                var arr = [];
-                try { arr = (typeof raw === 'string') ? JSON.parse(raw) : (raw || []); } catch (e) { arr = []; }
                 target.length = 0;   // Array-Objekt behalten (ADULT_ONLY zeigt auf MOD_ANIMS)
-                if (Array.isArray(arr)) {
-                    arr.forEach(function (x) {
-                        if (typeof x === 'string' && x.trim() && target.indexOf(x.trim()) < 0) target.push(x.trim());
-                    });
-                }
+                if (plus) plus.length = 0;
+                parseIds(cfgValue(res), target, plus);
                 done(target.length > 0);
             })
             .catch(function () { done(false); });
+    }
+
+    // JSON-Text oder Array -> IDs in target eintragen
+    function parseIds(raw, target, plus) {
+        var arr = [];
+        try { arr = (typeof raw === 'string') ? JSON.parse(raw) : (raw || []); } catch (e) { arr = []; }
+        if (!Array.isArray(arr)) return;
+        arr.forEach(function (x) {
+            if (typeof x !== 'string') return;
+            var id = x.trim();
+            if (plus && id.charAt(0) === '+') {
+                id = id.slice(1).trim();
+                if (id && plus.indexOf(id) < 0) plus.push(id);
+            }
+            if (id && target.indexOf(id) < 0) target.push(id);
+        });
     }
 
     // ------------------------------------------------------------------
@@ -234,12 +255,20 @@
 
     addCatButton('cat_all', ALL_KEY, 'all', function () { loadAll(); });
     addCatButton('cat_poses', POSES_KEY, 'poses', function () { showPoses(); });
-    var modsBtn = addCatButton('cat_mods', MODS_KEY, 'custom', function () {
+    function showMods() {
         currentFilter = MODS_KEY;
         highlightCategory(MODS_KEY);
         renderList(MOD_ANIMS, false);
         setStatus(t('mods_info'));
-    });
+    }
+    var modsBtn = addCatButton('cat_mods', MODS_KEY, 'custom', showMods);
+
+    // Feste Liste nach Ziel- oder Filterwechsel neu zeigen (Prüfung hängt vom Zoi ab)
+    function reshowFixed() {
+        if (currentFilter === CUSTOM_KEY) showCustom();
+        else if (currentFilter === MODS_KEY) showMods();
+        else if (currentFilter === POSES_KEY) showPoses();
+    }
     // Ausgegraut, solange saved/mod_anims.cfg fehlt oder leer ist
     var modsEnabled = false;
     function setModsEnabled(on) {
@@ -266,6 +295,8 @@
         });
         var isCustom = (key === CUSTOM_KEY);
         customRow.style.display = isCustom ? 'flex' : 'none';
+        var bar = document.getElementById('list-bar');
+        if (bar) bar.style.display = isCustom ? 'flex' : 'none';
         favBtn.style.display = isCustom ? 'none' : '';
     }
 
@@ -334,6 +365,8 @@
             if (currentFilter === ALL_KEY) loadAll();
             else if (isSearchFilter(currentFilter)) loadList(currentFilter);
         }
+        // Feste Listen werden immer für den neuen Zoi geprüft (grau markieren / ausblenden)
+        reshowFixed();
     }
 
     function rawText(res) {
@@ -433,8 +466,49 @@
         return s.toFixed(1) + ' s';
     }
 
+    // ------------------------------------------------------------------
+    // v2.5: Passt die Animation zum Ziel-Zoi (Alter/Geschlecht/Haltung)?
+    //   Suche und "Alle" filtert das Spiel selbst (motion.list validate=true mit entity_id).
+    //   Feste Listen (Eigene/benannte Listen, Mod-Anims, Posen) werden pro Eintrag geprüft:
+    //   motion.list mit der ID als Filter und validate=true. Unpassende werden grau markiert,
+    //   bei "Nur passende für diesen Zoi" ausgeblendet. Ergebnis pro Ziel-Zoi gemerkt.
+    // ------------------------------------------------------------------
+    var compat = {};          // "<ziel>|<anim_id>" -> true / false / null (unbekannt)
+    var itemEls = {};         // id -> Listeneintrag der aktuellen Liste
+
+    function compatKey(id) { return (targetId === null ? 'me' : String(targetId)) + '|' + id; }
+    function isBad(id) { return compat[compatKey(id)] === false; }
+    function isFixedList(f) { return f === CUSTOM_KEY || f === MODS_KEY || f === POSES_KEY; }
+    function needsCompat(id) { return isFixedList(currentFilter) && compat[compatKey(id)] === undefined; }
+
+    function checkCompat(id) {
+        var k = compatKey(id);
+        return cli('motion.list', { filter: id, max: ALL_MAX, validate: true })
+            .then(function (res) {
+                var ids = unwrapList(res).map(toAnimId);
+                compat[k] = ids.indexOf(id) >= 0;
+            })
+            .catch(function () { compat[k] = null; });
+    }
+
+    function markItem(id) {
+        var el = itemEls[id];
+        if (!el) return;
+        var bad = isBad(id);
+        el.className = 'item' + (selectedId === id ? ' selected' : '') + (bad ? ' bad' : '');
+        el.title = bad ? id + ' - ' + t('compat_no') : id;
+        el.style.display = (bad && validateEl.checked) ? 'none' : '';
+    }
+
+    // Nach der Prüfung einer festen Liste melden, wie viele nicht passen
+    function compatSummary() {
+        if (!isFixedList(currentFilter) || lenQueue.length || lenActive) return;
+        var n = shownIds.filter(isBad).length;
+        if (n) setStatus(t(validateEl.checked ? 'compat_hidden' : 'compat_marked', n));
+    }
+
     function queueLengths(ids) {
-        lenQueue = ids.filter(function (id) { return lenCache[id] === undefined; });
+        lenQueue = ids.filter(function (id) { return lenCache[id] === undefined || needsCompat(id); });
         pumpLengths();
     }
 
@@ -445,7 +519,7 @@
         var h = first.offsetHeight || 24;
         var from = Math.max(0, Math.floor(listEl.scrollTop / h) - 2);
         var to = from + Math.ceil(listEl.clientHeight / h) + 4;
-        var vis = shownIds.slice(from, to).filter(function (id) { return lenCache[id] === undefined; });
+        var vis = shownIds.slice(from, to).filter(function (id) { return lenCache[id] === undefined || needsCompat(id); });
         lenQueue = vis.concat(lenQueue.filter(function (id) { return vis.indexOf(id) < 0; }));
     }
 
@@ -453,17 +527,21 @@
         while (lenActive < LEN_PARALLEL && lenQueue.length) {
             (function (id) {
                 lenActive++;
-                cli('motion.get_info', { anim_id: id })
-                    .then(function (res) {
-                        var info = unwrap(res) || {};
-                        lenCache[id] = (typeof info.total_length === 'number') ? info.total_length : -1;
-                    })
-                    .catch(function () { lenCache[id] = -1; })
-                    .then(function () {
-                        lenActive--;
-                        if (durEls[id]) durEls[id].textContent = fmtLen(lenCache[id]);
-                        pumpLengths();
-                    });
+                var lenJob = lenCache[id] !== undefined ? Promise.resolve() :
+                    cli('motion.get_info', { anim_id: id })
+                        .then(function (res) {
+                            var info = unwrap(res) || {};
+                            lenCache[id] = (typeof info.total_length === 'number') ? info.total_length : -1;
+                        })
+                        .catch(function () { lenCache[id] = -1; });
+                var compatJob = needsCompat(id) ? checkCompat(id) : Promise.resolve();
+                Promise.all([lenJob, compatJob]).then(function () {
+                    lenActive--;
+                    if (durEls[id]) durEls[id].textContent = fmtLen(lenCache[id]);
+                    markItem(id);
+                    pumpLengths();
+                    compatSummary();
+                });
             })(lenQueue.shift());
         }
     }
@@ -482,6 +560,7 @@
         selectedId = null;
         shownIds = ids;
         durEls = {};
+        itemEls = {};
         if (!ids.length) {
             var e = document.createElement('div');
             e.className = 'empty';
@@ -492,8 +571,8 @@
         var frag = document.createDocumentFragment();   // ein Reflow statt tausender
         ids.forEach(function (id) {
             var it = document.createElement('div');
-            it.className = 'item';
-            it.title = id;
+            itemEls[id] = it;
+            markItem(id);
             var name = document.createElement('span');
             name.className = 'name';
             name.textContent = id;
@@ -515,12 +594,12 @@
                 it.appendChild(del);
             }
             it.addEventListener('click', function () {
-                var prev = listEl.querySelector('.item.selected');
-                if (prev) prev.className = 'item';
-                it.className = 'item selected';
-                if (selectedId === id) { play(id); }   // zweiter Klick = abspielen
-                else if (currentFilter === MODS_KEY || currentFilter === POSES_KEY) { checkAnim(id); }
+                var prevId = selectedId;
                 selectedId = id;
+                if (prevId && prevId !== id) markItem(prevId);
+                markItem(id);
+                if (prevId === id) { play(id); }   // zweiter Klick = abspielen
+                else if (currentFilter === MODS_KEY || currentFilter === POSES_KEY) { checkAnim(id); }
             });
             frag.appendChild(it);
         });
@@ -652,19 +731,25 @@
     // ------------------------------------------------------------------
     // Eigene Animationen (dauerhaft in cfg gespeichert, unabhängig vom Spielstand)
     // ------------------------------------------------------------------
+    // v2.5: aktive Liste ('' = "Eigene" aus custom.cfg, sonst saved/lists/<Name>.cfg)
+    function activeIds() { return activeList ? (namedLists[activeList] || []) : customList; }
+    function activeLabel() { return activeList || t('list_own'); }
+
     function showCustom() {
         currentFilter = CUSTOM_KEY;
         highlightCategory(CUSTOM_KEY);
-        renderList(customList, true);
-        setStatus(t('custom_count', customList.length));
+        renderListBar();
+        renderList(activeIds(), true);
+        setStatus(t('custom_count', activeIds().length, activeLabel()));
     }
 
     function saveCustom() {
+        var named = !!activeList;
         cli('uimod.cfg_save', {
             mod_id:  wf.MOD_ID,
-            section: CFG_SECTION,
-            key:     'custom',
-            value:   JSON.stringify(customList)
+            section: named ? LISTS_SECTION : CFG_SECTION,
+            key:     named ? activeList : 'custom',
+            value:   JSON.stringify(activeIds())
         }).catch(function (e) { setStatus(t('save_failed', errText(e)), true); });
     }
 
@@ -674,9 +759,165 @@
         });
     }
 
+    // ------------------------------------------------------------------
+    // v2.5: benannte Listen (Feedback: mehrere eigene Listen mit eigenen Namen)
+    //   Jede Datei saved/lists/<Name>.cfg ist eine Liste – auch selbst angelegte/kopierte Dateien.
+    //   uimod.cfg_load ohne key liefert alle Dateien der Sektion. Löschen geht per CLI nicht:
+    //   die Datei wird geleert ("") und danach ignoriert.
+    // ------------------------------------------------------------------
+    var listBarEl   = document.getElementById('list-bar');
+    var listChipsEl = document.getElementById('list-chips');
+    var listNameEl  = document.getElementById('list-name');
+
+    // Antwort von cfg_load ohne key -> { Name: Wert } (Form der Antwort robust erkennen)
+    function sectionEntries(res) {
+        var r = res;
+        if (typeof r === 'string') { try { r = JSON.parse(r); } catch (e) { return {}; } }
+        if (r && typeof r === 'object' && !Array.isArray(r)) {
+            ['values', 'keys', 'entries', 'result', 'value'].forEach(function (k) {
+                if (r && r[k] && typeof r[k] === 'object') r = r[k];
+            });
+        }
+        var out = {};
+        if (Array.isArray(r)) {
+            r.forEach(function (e) {
+                if (e && typeof e === 'object') {
+                    var n = e.key || e.name || e.file;
+                    if (typeof n === 'string') out[n.replace(/\.cfg$/i, '')] = e.value;
+                }
+            });
+        } else if (r && typeof r === 'object') {
+            Object.keys(r).forEach(function (n) { out[n.replace(/\.cfg$/i, '')] = r[n]; });
+        }
+        return out;
+    }
+
+    function loadLists(done) {
+        cli('uimod.cfg_load', { mod_id: wf.MOD_ID, section: LISTS_SECTION })
+            .then(function (res) {
+                var ents = sectionEntries(res);
+                namedLists = {};
+                Object.keys(ents).sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; })
+                    .forEach(function (n) {
+                        var v = ents[n];
+                        if (v === '' || v === null || v === undefined) return;   // gelöscht
+                        if (typeof v === 'string' && !/^\s*\[/.test(v)) return;   // keine Liste
+                        var ids = [];
+                        parseIds(v, ids);
+                        namedLists[n] = ids;
+                    });
+            })
+            .catch(function () {})
+            .then(function () {
+                listsLoaded = true;
+                if (activeList && !namedLists[activeList]) activeList = '';
+                renderListBar();
+                if (currentFilter === CUSTOM_KEY) showCustom();
+                if (done) done();
+            });
+    }
+
+    function saveList(name, value) {
+        return cli('uimod.cfg_save', { mod_id: wf.MOD_ID, section: LISTS_SECTION, key: name, value: value });
+    }
+
+    function selectList(name) {
+        activeList = name;
+        wf.state.activeList = name;
+        refreshFavText();
+        showCustom();
+    }
+
+    function refreshFavText() {
+        favBtn.textContent = t('fav_to', activeLabel());
+    }
+
+    function renderListBar() {
+        if (!listChipsEl) return;
+        listChipsEl.innerHTML = '';
+        [''].concat(Object.keys(namedLists)).forEach(function (n) {
+            var b = document.createElement('button');
+            b.className = 'btn chip' + (n === activeList ? ' active' : '');
+            b.textContent = n || t('list_own');
+            b.title = n ? 'saved/lists/' + n + '.cfg' : 'saved/custom.cfg';
+            b.addEventListener('click', function () { selectList(n); });
+            listChipsEl.appendChild(b);
+        });
+        var named = !!activeList;
+        document.getElementById('list-rename-btn').disabled = !named;
+        document.getElementById('list-delete-btn').disabled = !named;
+        refreshFavText();
+    }
+
+    function readListName() {
+        var n = (listNameEl.value || '').trim().replace(/\s+/g, '-');
+        if (!LIST_NAME_RE.test(n)) { setStatus(t('list_bad_name'), true); return null; }
+        if (namedLists[n] || n.toLowerCase() === 'custom') { setStatus(t('list_exists', n), true); return null; }
+        return n;
+    }
+
+    function newList() {
+        var n = readListName();
+        if (!n) return;
+        namedLists[n] = [];
+        saveList(n, '[]').then(function () {
+            listNameEl.value = '';
+            selectList(n);
+            setStatus(t('list_created', n));
+        }).catch(function (e) { delete namedLists[n]; setStatus(t('save_failed', errText(e)), true); });
+    }
+
+    function renameList() {
+        if (!activeList) return;
+        var n = readListName();
+        if (!n) return;
+        var old = activeList, ids = namedLists[old];
+        saveList(n, JSON.stringify(ids))
+            .then(function () { return saveList(old, ''); })
+            .then(function () {
+                delete namedLists[old];
+                namedLists[n] = ids;
+                listNameEl.value = '';
+                selectList(n);
+                setStatus(t('list_renamed', old, n));
+            })
+            .catch(function (e) { setStatus(t('save_failed', errText(e)), true); });
+    }
+
+    // Zweimal klicken zum Löschen (Schutz vor Versehen)
+    var deleteArmed = null;
+    function deleteList() {
+        if (!activeList) return;
+        var n = activeList;
+        if (deleteArmed !== n) {
+            deleteArmed = n;
+            setStatus(t('list_delete_confirm', n, namedLists[n].length), true);
+            setTimeout(function () { if (deleteArmed === n) deleteArmed = null; }, 4000);
+            return;
+        }
+        deleteArmed = null;
+        saveList(n, '').then(function () {
+            delete namedLists[n];
+            selectList('');
+            setStatus(t('list_deleted', n));
+        }).catch(function (e) { setStatus(t('save_failed', errText(e)), true); });
+    }
+
+    document.getElementById('list-new-btn').addEventListener('click', newList);
+    document.getElementById('list-rename-btn').addEventListener('click', renameList);
+    document.getElementById('list-delete-btn').addEventListener('click', deleteList);
+    document.getElementById('list-reload-btn').addEventListener('click', function () {
+        loadCustom();
+        loadLists(function () { setStatus(t('lists_loaded', Object.keys(namedLists).length)); });
+    });
+    listNameEl.addEventListener('keydown', function (e) {
+        e.stopPropagation();   // Tastatureingaben nicht ans Spiel weiterreichen
+        if (e.key === 'Enter' || e.keyCode === 13) newList();
+    });
+
     // Mod-Animationen aus saved/mod_anims.cfg (vom Nutzer gepflegt, JSON-Array mit IDs)
     function loadModAnims() {
-        loadIdList('mod_anims', MOD_ANIMS, setModsEnabled);
+        loadIdList('mod_anims', MOD_ANIMS, setModsEnabled, MOD_ALL_AGES);
     }
 
     // Zusätzliche Posen aus saved/pose_anims.cfg
@@ -689,10 +930,11 @@
     function addCustom(id) {
         id = (id || '').trim();
         if (!id) { setStatus(t('need_id'), true); return false; }
-        if (customList.indexOf(id) >= 0) { setStatus(t('custom_exists', id)); return false; }
-        customList.push(id);
+        var list = activeIds();
+        if (list.indexOf(id) >= 0) { setStatus(t('custom_exists', id, activeLabel())); return false; }
+        list.push(id);
         saveCustom();
-        setStatus(t('custom_added', id));
+        setStatus(t('custom_added', id, activeLabel()));
         checkAnim(id);
         return true;
     }
@@ -712,9 +954,10 @@
     }
 
     function removeCustom(id) {
-        var i = customList.indexOf(id);
+        var list = activeIds();
+        var i = list.indexOf(id);
         if (i < 0) return;
-        customList.splice(i, 1);
+        list.splice(i, 1);
         saveCustom();
         showCustom();
         setStatus(t('custom_removed', id));
@@ -817,7 +1060,8 @@
     }
 
     function buildRandomPool() {
-        var pool = shownIds.slice();
+        // v2.5: in festen Listen nur die, die zum Zoi passen (bzw. noch ungeprüft sind)
+        var pool = shownIds.filter(function (id) { return !isBad(id); });
         if (!pool.some(isAdultOnly)) return Promise.resolve(pool);
         return checkAdult().then(function () { return pool; })
             .catch(function () { return pool.filter(function (id) { return !isAdultOnly(id); }); });
@@ -842,7 +1086,7 @@
     // Youth = junge Erwachsene, Adult, Old, Elderly. Kinder/Teenager sind gesperrt.
     var ADULT_STEPS = { Youth: 1, Adult: 1, Old: 1, Elderly: 1, '32': 1, '64': 1, '128': 1, '256': 1 };
 
-    function isAdultOnly(id) { return ADULT_ONLY.indexOf(id) >= 0; }
+    function isAdultOnly(id) { return ADULT_ONLY.indexOf(id) >= 0 && MOD_ALL_AGES.indexOf(id) < 0; }
 
     // Prüft das Alter des Ziel-Zois. Unbekanntes Alter wird sicherheitshalber gesperrt.
     function checkAdult() {
@@ -1255,6 +1499,10 @@
     validateEl._onToggle = function () {
         if (currentFilter === ALL_KEY) loadAll();
         else if (isSearchFilter(currentFilter)) loadList(currentFilter);
+        else if (isFixedList(currentFilter)) {
+            Object.keys(itemEls).forEach(markItem);
+            compatSummary();
+        }
     };
 
     // ------------------------------------------------------------------
@@ -1297,6 +1545,7 @@
         setDebugEnabled(debugEnabled);
         setFrozen(frozen);
         langBtn.textContent = I18N.lang.toUpperCase();
+        renderListBar();
         if (currentFilter === CUSTOM_KEY) showCustom();
         else if (currentFilter === POSES_KEY) showPoses();
         else if (!listEl.querySelector('.item')) {
@@ -1358,6 +1607,11 @@
         if (typeof s.debug === 'boolean') setDebugEnabled(s.debug);
         if (typeof s.speed === 'number') setSpeed(s.speed, false);
         if (typeof s.hold === 'boolean') holdEl.setChecked(s.hold);
+        // gemerkte Liste erst nach dem Laden der Listen wählen (loadLists prüft, ob es sie noch gibt)
+        if (typeof s.activeList === 'string') {
+            activeList = (listsLoaded && !namedLists[s.activeList]) ? '' : s.activeList;
+            renderListBar();
+        }
         if (tabs.hasOwnProperty(s.tab)) showTab(s.tab);
     };
 
@@ -1390,6 +1644,7 @@
     loadJobs();
     initLanguage();
     loadCustom();
+    loadLists();
     loadModAnims();
     loadPoseAnims();
 })();
