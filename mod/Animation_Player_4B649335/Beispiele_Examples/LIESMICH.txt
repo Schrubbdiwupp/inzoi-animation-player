@@ -66,6 +66,10 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
     Animation in der gewählten Liste.
     Jede Liste ist eine Datei saved\lists\<Name>.cfg. Du kannst solche
     Dateien auch selbst anlegen oder weitergeben, danach "Neu laden".
+    Ein + vor einer ID (z. B. "+Self_TakePhoto") überspringt bei diesem
+    Eintrag die Prüfung "passt zum Zoi": er wird nie durchgestrichen oder
+    ausgeblendet, das Spiel entscheidet erst beim Abspielen (ab 2.5.1).
+    Hat das Spiel für das Alter keine Animation, kommt dessen Fehlermeldung.
 
   Abspielen   spielt die gewählte Animation auf dem Ziel-Zoi ab
   Loop        wiederholt die Animation endlos – auch wenn das Fenster (F9)

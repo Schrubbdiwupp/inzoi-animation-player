@@ -115,6 +115,9 @@
     // v2.5: Einträge mit "+" davor (z. B. "+Self_TakePhoto") sind für alle Altersstufen freigegeben
     // (Feedback: Teens durften Spiel-Animationen aus mod_anims.cfg nicht abspielen).
     var MOD_ALL_AGES = [];
+    // v2.5.1: "+" in eigenen Listen (Eigene/benannte) = Teen-Prüfung überspringen, das Spiel entscheidet beim Abspielen
+    // (Feedback: "+Self_TakePhoto" in saved/lists/*.cfg wurde wörtlich mit "+" gesucht). '' = "Eigene".
+    var listPlus     = { '': [] };   // Liste -> [anim_id mit "+"]
     // v2.5: benannte Listen, je eine Datei saved/lists/<Name>.cfg (JSON-Array mit IDs).
     // '' = die bisherige Liste "Eigene" (saved/custom.cfg).
     var LISTS_SECTION = 'ui/' + wf.APP_NAME + '/saved/lists';
@@ -212,7 +215,7 @@
     }
 
     // JSON-Array mit Animations-IDs aus einer cfg-Datei lesen (doppelte/leere entfernt).
-    // plus (optional): IDs mit "+" davor landen ohne "+" in target UND in plus.
+    // "+" davor wird immer entfernt; plus (optional): solche IDs landen zusätzlich in plus.
     function loadIdList(key, target, done, plus) {
         cli('uimod.cfg_load', { mod_id: wf.MOD_ID, section: CFG_SECTION, key: key })
             .then(function (res) {
@@ -232,9 +235,9 @@
         arr.forEach(function (x) {
             if (typeof x !== 'string') return;
             var id = x.trim();
-            if (plus && id.charAt(0) === '+') {
+            if (id.charAt(0) === '+') {
                 id = id.slice(1).trim();
-                if (id && plus.indexOf(id) < 0) plus.push(id);
+                if (plus && id && plus.indexOf(id) < 0) plus.push(id);
             }
             if (id && target.indexOf(id) < 0) target.push(id);
         });
@@ -477,7 +480,13 @@
     var itemEls = {};         // id -> Listeneintrag der aktuellen Liste
 
     function compatKey(id) { return (targetId === null ? 'me' : String(targetId)) + '|' + id; }
-    function isBad(id) { return compat[compatKey(id)] === false; }
+    function isBad(id) { return compat[compatKey(id)] === false && !skipsCompat(id); }
+    // v2.5.1: "+"-Einträge werden nie als unpassend markiert/ausgeblendet
+    function skipsCompat(id) {
+        if (currentFilter === CUSTOM_KEY) return activePlus().indexOf(id) >= 0;
+        if (currentFilter === MODS_KEY) return MOD_ALL_AGES.indexOf(id) >= 0;
+        return false;
+    }
     function isFixedList(f) { return f === CUSTOM_KEY || f === MODS_KEY || f === POSES_KEY; }
     function needsCompat(id) { return isFixedList(currentFilter) && compat[compatKey(id)] === undefined; }
 
@@ -734,6 +743,9 @@
     // v2.5: aktive Liste ('' = "Eigene" aus custom.cfg, sonst saved/lists/<Name>.cfg)
     function activeIds() { return activeList ? (namedLists[activeList] || []) : customList; }
     function activeLabel() { return activeList || t('list_own'); }
+    function activePlus() { return listPlus[activeList] || (listPlus[activeList] = []); }
+    // v2.5.1: beim Speichern das "+" wieder vor die IDs setzen
+    function withPlus(ids, plus) { return ids.map(function (id) { return plus.indexOf(id) >= 0 ? '+' + id : id; }); }
 
     function showCustom() {
         currentFilter = CUSTOM_KEY;
@@ -749,14 +761,14 @@
             mod_id:  wf.MOD_ID,
             section: named ? LISTS_SECTION : CFG_SECTION,
             key:     named ? activeList : 'custom',
-            value:   JSON.stringify(activeIds())
+            value:   JSON.stringify(withPlus(activeIds(), activePlus()))
         }).catch(function (e) { setStatus(t('save_failed', errText(e)), true); });
     }
 
     function loadCustom() {
         loadIdList('custom', customList, function () {
             if (currentFilter === CUSTOM_KEY) showCustom();
-        });
+        }, listPlus['']);
     }
 
     // ------------------------------------------------------------------
@@ -802,9 +814,10 @@
                         var v = ents[n];
                         if (v === '' || v === null || v === undefined) return;   // gelöscht
                         if (typeof v === 'string' && !/^\s*\[/.test(v)) return;   // keine Liste
-                        var ids = [];
-                        parseIds(v, ids);
+                        var ids = [], plus = [];
+                        parseIds(v, ids, plus);
                         namedLists[n] = ids;
+                        listPlus[n] = plus;
                     });
             })
             .catch(function () {})
@@ -871,12 +884,14 @@
         if (!activeList) return;
         var n = readListName();
         if (!n) return;
-        var old = activeList, ids = namedLists[old];
-        saveList(n, JSON.stringify(ids))
+        var old = activeList, ids = namedLists[old], plus = listPlus[old] || [];
+        saveList(n, JSON.stringify(withPlus(ids, plus)))
             .then(function () { return saveList(old, ''); })
             .then(function () {
                 delete namedLists[old];
+                delete listPlus[old];
                 namedLists[n] = ids;
+                listPlus[n] = plus;
                 listNameEl.value = '';
                 selectList(n);
                 setStatus(t('list_renamed', old, n));
@@ -898,6 +913,7 @@
         deleteArmed = null;
         saveList(n, '').then(function () {
             delete namedLists[n];
+            delete listPlus[n];
             selectList('');
             setStatus(t('list_deleted', n));
         }).catch(function (e) { setStatus(t('save_failed', errText(e)), true); });

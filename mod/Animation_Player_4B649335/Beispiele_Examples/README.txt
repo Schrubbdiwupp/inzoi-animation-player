@@ -65,6 +65,10 @@ target Zoi.
     the selected list.
     Every list is a file saved\lists\<name>.cfg. You can also create or
     share such files yourself, then click "Reload".
+    A + in front of an ID (e.g. "+Self_TakePhoto") skips the "fits this
+    Zoi" check for that entry: it is never struck through or hidden, the
+    game decides when you press Play (since 2.5.1). If the game has no
+    animation for that age, you get the game's error message.
 
   Play        plays the selected animation on the target Zoi
   Loop        repeats the animation endlessly - even with the window (F9)
