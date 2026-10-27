@@ -52,7 +52,7 @@
 
     var bones = [];           // alle Knochen des Ziels
     var bonesLoaded = false;
-    var group = 'body';
+    var group = 'head';       // v2.5.2: nur Kopf-Posen wirken im Spiel sichtbar, daher Kopf als Start
     var selected = null;      // gewählter Knochen
     var mode = 'additive';    // additive | replace
     var pose = {};            // bone -> [pitch, yaw, roll] (nur geänderte Knochen)

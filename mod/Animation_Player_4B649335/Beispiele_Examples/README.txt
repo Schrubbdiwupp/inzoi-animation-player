@@ -117,6 +117,12 @@ target Zoi.
 ------------------------------------------------------------------------------
  3. "POSE EDITOR" TAB
 ------------------------------------------------------------------------------
+  IMPORTANT (game limitation, tested October 2026): the game's pose command
+  is experimental and currently only shows on the HEAD (tilt, turn, size).
+  Arms, hands, legs and torso are ignored by the game - at most the
+  elbow/wrist twists a little. Arm poses (e.g. a handshake) need a custom
+  animation.
+
   Rotate individual bones (head, arms, spine, fingers, ...).
 
   1. Click a bone in the list (groups: Body, Head, Torso, Arms, Fingers,

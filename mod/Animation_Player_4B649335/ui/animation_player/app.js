@@ -1302,15 +1302,24 @@
         }).catch(function () { return null; });
     }
 
+    // v2.5.2: time_speed 0 hält die Zeit im aktuellen Spielstand nicht mehr an (getestet 27.10.2026).
+    // Deshalb zuerst die echte Spielpause environment.pause, time_speed 0 nur noch als Rückfallebene.
     function pauseTime() {
         return currentTimeScale().then(function (s) {
             if (s !== null && s > 0) savedTimeSpeed = s;
-            return cli('environment.time_speed', { speed: 0 });
+            return cli('environment.pause', {})
+                .catch(function () { return null; })
+                .then(function (paused) {
+                    return cli('environment.time_speed', { speed: 0 }).catch(function (e) {
+                        if (!paused) throw e;                                   // beides fehlgeschlagen
+                    });
+                });
         });
     }
 
     function resumeTime() {
-        return cli('environment.resume', {}).catch(function () {})          // evtl. alte Simulations-Pause lösen
+        return cli('environment.pause', { enable: false }).catch(function () {})
+            .then(function () { return cli('environment.resume', {}).catch(function () {}); })   // evtl. alte Simulations-Pause lösen
             .then(function () { return currentTimeScale(); })
             .then(function (s) {
                 if (s === null || s <= 0) {

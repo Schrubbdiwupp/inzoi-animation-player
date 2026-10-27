@@ -118,6 +118,12 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
 ------------------------------------------------------------------------------
  3. REITER "POSE-EDITOR"
 ------------------------------------------------------------------------------
+  WICHTIG (Grenze des Spiels, getestet Oktober 2026): Der Posen-Befehl des
+  Spiels ist experimentell und wirkt zurzeit nur sichtbar am KOPF (Neigen,
+  Drehen, Größe). Arme, Hände, Beine und Oberkörper ignoriert das Spiel -
+  höchstens Ellbogen/Handgelenk verdrehen sich leicht. Für Arm-Posen (z. B.
+  Händeschütteln) braucht es eine eigene Animation.
+
   Damit verdrehst du einzelne Knochen (Kopf, Arme, Wirbelsäule, Finger, ...).
 
   1. Knochen in der Liste anklicken (Gruppen: Körper, Kopf, Rumpf, Arme,

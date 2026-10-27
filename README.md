@@ -9,6 +9,7 @@ A UI mod for **inZOI** (toggle with **F9**): play any animation or pose on any Z
 - **Animations tab** – search all game and mod animations (categories, full list, favourites), loop (keeps running with the window closed, one loop per Zoi), speed 0.25–3x, random toggle (with loop: random playlist), stop / stop all, freeze / pause at the end for photos, progress bar with length.
 - **AI Motions tab** – plays the AI motions you created in the game (*click a Zoi > AI Emote*), with loop, stop, progress bar and custom slot names.
 - **Pose Editor** – bend single bones (additive or replace), save and load your own poses.
+  *Note (game limitation, tested Oct 2026):* the game's experimental pose command currently only shows on the **head** (tilt, turn, size). Arms, hands, legs and torso are ignored – at most the elbow/wrist twists a little. Arm poses (e.g. a handshake) need a custom animation.
 - **Target Zoi** – your Zoi, the Zoi in front of the camera, Zois nearby or your household.
 
 ## Install
@@ -42,6 +43,7 @@ Ein UI-Mod für **inZOI** (Ein-/Ausblenden mit **F9**): beliebige Animationen un
 - **Reiter Animationen** – alle Spiel- und Mod-Animationen durchsuchen (Kategorien, Gesamtliste, Favoriten), Loop (läuft auch bei geschlossenem Fenster, eigener Loop pro Zoi), Tempo 0,25–3x, Zufall-Schalter (mit Loop: zufällige Abfolge), Stopp / Alle stoppen, Einfrieren / am Ende anhalten für Fotos, Fortschrittsbalken mit Länge.
 - **Reiter KI-Bewegungen** – spielt die KI-Bewegungen ab, die du im Spiel erstellt hast (*Zoi anklicken > KI-Emote*), mit Loop, Stopp, Fortschrittsbalken und eigenen Slot-Namen.
 - **Pose-Editor** – einzelne Knochen verbiegen (additiv oder ersetzen), eigene Posen speichern und laden.
+  *Hinweis (Grenze des Spiels, getestet Okt. 2026):* Der experimentelle Posen-Befehl des Spiels wirkt zurzeit nur sichtbar am **Kopf** (Neigen, Drehen, Größe). Arme, Hände, Beine und Oberkörper werden ignoriert – höchstens Ellbogen/Handgelenk verdrehen sich leicht. Arm-Posen (z. B. Händeschütteln) brauchen eine eigene Animation.
 - **Ziel-Zoi** – dein Zoi, der Zoi vor der Kamera, Zois in der Nähe oder dein Haushalt.
 
 ### Installation
