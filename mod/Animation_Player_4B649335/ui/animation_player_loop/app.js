@@ -14,7 +14,8 @@
  *   vor dem Ende manchmal verpasst (Feedback: Dreher kam unregelmäßig wieder). Der Neustartpunkt
  *   berücksichtigt jetzt blend_out_time der Montage, die gemessene Antwortzeit und das tatsächlich
  *   gemessene Abspieltempo (Spielgeschwindigkeit, Tempo-Regler).
- * Montagen mit eigenem Loop-Abschnitt laufen von selbst weiter und werden nicht angefasst.
+ * Montagen mit eigenem Loop-Abschnitt laufen allein von selbst weiter; in einer Zufallsliste wird nach einmal
+ * Gesamtlänge gewechselt (v2.5.3, sonst blieben z. B. die SmartPhone-Animationen ewig hängen).
  * Zufall: nächste Animation zufällig aus ids (nicht zweimal dieselbe hintereinander).
  * KI-Bewegung: Interaktion Self_GeneratedMotionSlot<n> nach dem Ende neu starten.
  *
@@ -57,9 +58,18 @@
         if (motionInfo[k]) return Promise.resolve(motionInfo[k]);
         return cli('motion.get_info', { anim_id: id, entity_id: ent }).then(function (info) {
             info = info || {};
+            var secs = Array.isArray(info.sections) ? info.sections : [];
+            // v2.5.3: Beginn eines End-Abschnitts (Rückweg in die Grundhaltung, dreht den Zoi oft zurück).
+            // Feedback (Nexus, rxsteam3d): „still twirls between anims“ – der Neustart kam erst kurz vor dem
+            // Ausblenden ganz am Schluss, also mitten im bzw. nach dem Zurückdrehen.
+            var end = 0;
+            secs.forEach(function (s) {
+                if (s && /^end/i.test(s.name || '') && typeof s.start_time === 'number' && s.start_time > 0) end = end ? Math.min(end, s.start_time) : s.start_time;
+            });
             motionInfo[k] = {
-                loops: Array.isArray(info.sections) && info.sections.some(function (s) { return s && s.is_loop; }),
-                blend: (typeof info.blend_out_time === 'number' && info.blend_out_time >= 0) ? info.blend_out_time : BLEND_DEFAULT
+                loops: secs.some(function (s) { return s && s.is_loop; }),
+                blend: (typeof info.blend_out_time === 'number' && info.blend_out_time >= 0) ? info.blend_out_time : BLEND_DEFAULT,
+                endStart: end
             };
             return motionInfo[k];
         }).catch(function () { return { loops: false, blend: BLEND_DEFAULT }; });
@@ -121,8 +131,18 @@
                 if (r.timer) return;   // Neustart ist schon genau geplant
                 var id = job.current;
                 return getInfo(id, ent).then(function (info) {
-                    if (info.loops) return;
+                    if (info.loops) {
+                        // v2.5.3: Montage mit eigenem Loop-Abschnitt (z. B. SmartPhone_Check). Allein läuft sie von selbst
+                        // weiter; in einer Zufallsliste nach einmal Gesamtlänge (Abspielzeit × Tempo) zur nächsten wechseln.
+                        // Feedback (Nexus, rxsteam3d): sie blieb sonst ewig in ihrem Loop-Abschnitt hängen.
+                        // Tempo hier vom Spiel (rate_scale): die Messung über die Position taugt nicht, weil sie im Loop zurückspringt
+                        var spielRate = (typeof m.rate_scale === 'number' && m.rate_scale > 0) ? m.rate_scale : 1;
+                        if (job.random && (job.ids || []).length > 1 && elapsed * spielRate >= m.total_length) return start(ent, r);
+                        return;
+                    }
                     var at = Math.max(m.total_length * 0.5, m.total_length - info.blend - MARGIN);
+                    // End-Abschnitt vorhanden: schon kurz vor dessen Beginn neu starten (nicht in den ersten 30 %)
+                    if (info.endStart > m.total_length * 0.3 && info.endStart - MARGIN < at) at = info.endStart - MARGIN;
                     // echte Sekunden bis zum Neustartpunkt: die Position ist schon latency/2 alt,
                     // und motion.play braucht nochmal etwa latency/2, bis es im Spiel ankommt
                     var wait = (at - pos) / rate - latency;

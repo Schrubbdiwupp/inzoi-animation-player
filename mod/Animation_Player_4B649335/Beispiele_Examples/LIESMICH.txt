@@ -264,9 +264,23 @@ Alles (Animationen UND Pose-Editor) wirkt immer auf den gewählten Ziel-Zoi.
          Für alle Altersstufen ein + vor die ID setzen (siehe Abschnitt 6)
          oder die Animation in "* Eigene" / eine eigene Liste legen.
 
-  Zoi dreht sich beim Loop zwischen zwei Durchläufen einmal im Kreis
-      -> Seit 2.5 deutlich seltener (genauer Neustart vor dem Ausblenden).
-         Bei sehr starken Rucklern kann es noch vorkommen.
+  Zoi dreht sich beim Loop zwischen zwei Animationen / Durchläufen
+      -> Seit 2.5 deutlich seltener (genauer Neustart vor dem Ausblenden),
+         seit 2.5.3 startet die nächste Animation schon vor dem
+         End-Abschnitt (dem Rückweg in die Grundhaltung, der oft dreht).
+         Animationen, die den Zoi selbst drehen, können sich weiter drehen:
+         das Spiel hat keinen Befehl, die Blickrichtung festzuhalten.
+
+  Zufall-Loop bleibt bei einer Animation hängen (z. B. SmartPhone_Check)
+      -> Behoben in 2.5.3. Solche Animationen haben einen eigenen
+         Loop-Abschnitt; in einer Zufallsliste wird jetzt nach einmal
+         ihrer Länge zur nächsten gewechselt. Allein loopen sie wie bisher.
+
+  Teenager: "Animation has no valid montage" (auch mit + vor der ID)
+      -> Diese Meldung kommt vom Spiel: es hat für diese Animation keine
+         Teen-Version (z. B. SmartPhone_Check, Self_TakePhoto). Das +
+         schaltet nur die Prüfung des Players ab, abspielen kann das Spiel
+         sie trotzdem nicht. Ab junger Erwachsener funktioniert es.
 
   "Keine Treffer" / Animation startet nicht
       -> Haken "Nur passende für diesen Zoi" entfernen und erneut

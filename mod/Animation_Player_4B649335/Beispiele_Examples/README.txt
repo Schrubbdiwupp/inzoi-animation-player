@@ -261,9 +261,23 @@ target Zoi.
          To allow all ages, put a + in front of the ID (see section 6),
          or put the animation in "* Own" / a named list.
 
-  Zoi spins around once between two loop runs
-      -> Much rarer since 2.5 (precise restart before the blend-out).
-         It can still happen during very heavy stutters.
+  Zoi spins around between two animations / loop runs
+      -> Much rarer since 2.5 (precise restart before the blend-out);
+         since 2.5.3 the next animation starts before the End section
+         (the way back to the idle pose, which often turns the Zoi).
+         Animations that turn the Zoi themselves can still turn it:
+         the game has no command to hold the facing direction.
+
+  Random loop gets stuck on one animation (e.g. SmartPhone_Check)
+      -> Fixed in 2.5.3. These animations have their own loop section;
+         in a random list the player now moves on after one full length.
+         On their own they still loop as before.
+
+  Teens: "Animation has no valid montage" (even with + in front of the ID)
+      -> This message comes from the game: it has no teen version of that
+         animation (e.g. SmartPhone_Check, Self_TakePhoto). The + only
+         turns off the player's own check - the game still can't play it.
+         Young adults and older work.
 
   "No results" / animation doesn't start
       -> Untick "Only matching for this Zoi" and try again. Some animations
